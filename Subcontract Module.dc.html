@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cfd4dc;border-radius:8px;border:2px solid #f4f5f7}
+  a{color:var(--accent,#3a5bd9);text-decoration:none}
+  a:hover{color:#2a44a8}
+  input,select,textarea,button{font-family:inherit}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#101828;background:#f4f5f7;font-size:14px;line-height:1.45;--line:#e6e8ec">
+
+  <!-- SIDEBAR -->
+  <aside style="width:248px;flex:none;background:#0f1523;color:#c3cad9;display:flex;flex-direction:column;position:sticky;top:0;height:100vh">
+    <div style="padding:20px 20px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid rgba(255,255,255,.07)">
+      <div style="width:34px;height:34px;border-radius:9px;background:var(--accent,#3a5bd9);display:flex;align-items:center;justify-content:center;flex:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </div>
+      <div style="line-height:1.15">
+        <div style="font-weight:700;color:#fff;font-size:14.5px;letter-spacing:-.01em">Subcontract</div>
+        <div style="font-size:11px;color:#7a869c;font-weight:500">Vendor & Manpower Control</div>
+      </div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;padding:14px 12px">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="9">
+        <sc-if value="{{ item.isGroup }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#5b667e;padding:16px 12px 7px">{{ item.label }}</div>
+        </sc-if>
+        <sc-if value="{{ item.id }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ item.onClick }}" style="{{ item.style }}" style-hover="background:rgba(255,255,255,.05);color:#fff">
+            <span style="width:6px;height:6px;border-radius:50%;flex:none;background:{{ item.dot }}"></span>
+            {{ item.label }}
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header style="height:64px;flex:none;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 26px;position:sticky;top:0;z-index:20">
+      <div style="min-width:0">
+        <div style="font-size:16.5px;font-weight:600;letter-spacing:-.01em">{{ pageTitle }}</div>
+        <div style="font-size:12px;color:#667085">{{ pageSubtitle }}</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:9px;background:#f4f5f7;border:1px solid var(--line);border-radius:8px;padding:7px 11px;width:230px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#98a2b3" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <span style="font-size:12.5px;color:#98a2b3">Search contracts, vendors…</span>
+      </div>
+      <button onClick="{{ goCreate }}" style="display:flex;align-items:center;gap:7px;background:var(--accent,#3a5bd9);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer" style-hover="filter:brightness(1.08)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+        New Contract
+      </button>
+      <div style="width:36px;height:36px;border-radius:50%;background:color-mix(in srgb, var(--accent,#3a5bd9) 15%, #fff);color:var(--accent,#3a5bd9);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none">RM</div>
+    </header>
+
+    <main style="flex:1;overflow-y:auto;padding:26px 26px 60px">
+
+      <!-- ============ DASHBOARD ============ -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:20px;max-width:1280px">
+        <!-- KPI ROW -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:14px">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="6">
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:16px 16px 15px">
+              <div style="font-size:11.5px;color:#667085;font-weight:500;margin-bottom:9px">{{ k.label }}</div>
+              <div style="font-size:22px;font-weight:700;letter-spacing:-.02em;font-family:'IBM Plex Mono',monospace">{{ k.value }}</div>
+              <div style="font-size:11px;font-weight:600;margin-top:6px;color:{{ k.deltaColor }}">{{ k.delta }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:20px">
+          <!-- ALERTS -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+            <div style="padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between">
+              <div style="font-weight:600;font-size:14px">Alerts &amp; Attention</div>
+              <span style="font-size:11px;color:#98a2b3;font-weight:500">Auto-generated · updated 09:12</span>
+            </div>
+            <div>
+              <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="5">
+                <div style="display:flex;gap:13px;padding:13px 18px;border-bottom:1px solid #f0f1f4;align-items:flex-start">
+                  <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex:none;background:{{ a.color }}"></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13px;font-weight:600">{{ a.title }}</div>
+                    <div style="font-size:12px;color:#667085;margin-top:1px">{{ a.detail }}</div>
+                  </div>
+                  <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;flex:none;color:{{ a.color }};background:{{ a.bg }}">{{ a.tag }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- SPEND BY SERVICE TYPE -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">Committed Value by Service Type</div>
+            <div style="font-size:12px;color:#667085;margin-bottom:16px">Share of SAR 68.4M portfolio</div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ serviceMix }}" as="s" hint-placeholder-count="4">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px">
+                    <span style="font-weight:500">{{ s.label }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;color:#475467">{{ s.amount }} · {{ s.pct }}</span>
+                  </div>
+                  <div style="height:8px;background:#f0f1f4;border-radius:6px;overflow:hidden">
+                    <div style="height:100%;border-radius:6px;width:{{ s.width }};background:{{ s.color }}"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <!-- PENDING APPROVALS -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+          <div style="padding:15px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">Pending My Action</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="text-align:left;color:#667085;font-size:11px;text-transform:uppercase;letter-spacing:.05em">
+                <th style="padding:10px 18px;font-weight:600">Reference</th>
+                <th style="padding:10px 18px;font-weight:600">Item</th>
+                <th style="padding:10px 18px;font-weight:600">Vendor</th>
+                <th style="padding:10px 18px;font-weight:600">Stage</th>
+                <th style="padding:10px 18px;font-weight:600;text-align:right">Amount</th>
+                <th style="padding:10px 18px;font-weight:600">Waiting</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ approvals }}" as="p" hint-placeholder-count="4">
+                <tr style="border-top:1px solid #f0f1f4">
+                  <td style="padding:12px 18px;font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--accent,#3a5bd9)">{{ p.ref }}</td>
+                  <td style="padding:12px 18px">{{ p.item }}</td>
+                  <td style="padding:12px 18px;color:#475467">{{ p.vendor }}</td>
+                  <td style="padding:12px 18px;color:#475467">{{ p.stage }}</td>
+                  <td style="padding:12px 18px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ p.amount }}</td>
+                  <td style="padding:12px 18px"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;color:{{ p.color }};background:{{ p.bg }}">{{ p.age }}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CONTRACTS LIST ============ -->
+      <sc-if value="{{ isContracts }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:16px;max-width:1320px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <sc-for list="{{ contractFilters }}" as="f" hint-placeholder-count="5">
+            <div style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12.5px;color:#475467;cursor:pointer">
+              <span style="color:#98a2b3">{{ f.label }}:</span><span style="font-weight:600;color:#101828">{{ f.value }}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#98a2b3" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </sc-for>
+          <div style="flex:1"></div>
+          <span style="font-size:12.5px;color:#667085">{{ contractCount }} contracts</span>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="text-align:left;color:#667085;font-size:11px;text-transform:uppercase;letter-spacing:.05em;background:#fafbfc">
+                <th style="padding:12px 16px;font-weight:600">Contract #</th>
+                <th style="padding:12px 16px;font-weight:600">Vendor</th>
+                <th style="padding:12px 16px;font-weight:600">Type</th>
+                <th style="padding:12px 16px;font-weight:600">Project</th>
+                <th style="padding:12px 16px;font-weight:600;text-align:right">Value</th>
+                <th style="padding:12px 16px;font-weight:600">Progress</th>
+                <th style="padding:12px 16px;font-weight:600">Expiry</th>
+                <th style="padding:12px 16px;font-weight:600">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ contracts }}" as="c" hint-placeholder-count="6">
+                <tr onClick="{{ c.open }}" style="border-top:1px solid #f0f1f4;cursor:pointer" style-hover="background:#fafbfc">
+                  <td style="padding:13px 16px;font-family:'IBM Plex Mono',monospace;font-weight:500;color:var(--accent,#3a5bd9)">{{ c.id }}</td>
+                  <td style="padding:13px 16px;font-weight:600">{{ c.vendor }}</td>
+                  <td style="padding:13px 16px"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;color:{{ c.typeColor }};background:{{ c.typeBg }}">{{ c.type }}</span></td>
+                  <td style="padding:13px 16px;color:#475467">{{ c.project }}</td>
+                  <td style="padding:13px 16px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ c.valueFmt }}</td>
+                  <td style="padding:13px 16px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:66px;height:6px;background:#f0f1f4;border-radius:6px;overflow:hidden"><div style="height:100%;border-radius:6px;width:{{ c.progressW }};background:{{ c.progressColor }}"></div></div>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#475467">{{ c.progress }}</span>
+                    </div>
+                  </td>
+                  <td style="padding:13px 16px;color:#475467;font-family:'IBM Plex Mono',monospace;font-size:12px">{{ c.expiry }}</td>
+                  <td style="padding:13px 16px"><span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;color:{{ c.statusColor }};background:{{ c.statusBg }}">{{ c.status }}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CONTRACT CREATION ============ -->
+      <sc-if value="{{ isCreate }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:22px;max-width:1280px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:18px">
+
+          <!-- oracle PR trigger -->
+          <div style="background:color-mix(in srgb, var(--accent,#3a5bd9) 6%, #fff);border:1px solid color-mix(in srgb, var(--accent,#3a5bd9) 30%, #fff);border-radius:var(--radius,10px);padding:14px 18px;display:flex;align-items:center;gap:13px">
+            <div style="width:34px;height:34px;border-radius:8px;background:var(--accent,#3a5bd9);display:flex;align-items:center;justify-content:center;flex:none">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:13.5px">Triggered by approved Oracle PR — <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent,#3a5bd9)">PR-0123, PR-0124</span></div>
+              <div style="font-size:12px;color:#667085">PR lines flow in from Oracle and populate the BOQ below. On approval a PO is auto-created back in Oracle.</div>
+            </div>
+            <span style="font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;color:#12805c;background:#e6f4ee;flex:none">PR Approved</span>
+          </div>
+
+          <!-- contract type toggle -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+            <div style="font-size:12px;font-weight:600;color:#667085;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Contract Type</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="border:2px solid var(--accent,#3a5bd9);border-radius:9px;padding:14px;background:color-mix(in srgb, var(--accent,#3a5bd9) 6%, #fff)">
+                <div style="display:flex;align-items:center;gap:9px;font-weight:600;font-size:13.5px"><span style="width:16px;height:16px;border-radius:50%;border:5px solid var(--accent,#3a5bd9);flex:none"></span>Scope / Works Contract</div>
+                <div style="font-size:12px;color:#667085;margin-top:6px;padding-left:25px">Lump-sum or measured works, progress-billed via IPC. Retention &amp; advance apply.</div>
+              </div>
+              <div style="border:1.5px solid var(--line);border-radius:9px;padding:14px">
+                <div style="display:flex;align-items:center;gap:9px;font-weight:600;font-size:13.5px;color:#475467"><span style="width:16px;height:16px;border-radius:50%;border:1.5px solid #cfd4dc;flex:none"></span>Manpower Supply</div>
+                <div style="font-size:12px;color:#98a2b3;margin-top:6px;padding-left:25px">Rate-based labour, reconciled monthly from HCM timesheets vs vendor invoice.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- header -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+              <span style="font-weight:600;font-size:14px">Contract Header</span>
+              <span style="font-size:11px;color:#98a2b3">Linked to approved PR</span>
+            </div>
+            <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px 18px">
+              <sc-for list="{{ headerFields }}" as="f" hint-placeholder-count="9">
+                <div style="grid-column:{{ f.span }}">
+                  <label style="display:block;font-size:11.5px;font-weight:500;color:#667085;margin-bottom:6px">{{ f.label }}</label>
+                  <div style="border:1px solid var(--line);border-radius:7px;padding:9px 11px;font-size:13px;background:{{ f.bg }};color:{{ f.color }};display:flex;align-items:center;justify-content:space-between">
+                    <span>{{ f.value }}</span>
+                    <span style="color:#c0c5d0;font-size:11px">{{ f.hint }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- payment terms -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">Payment Terms &amp; Securities</div>
+            <div style="padding:18px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+              <sc-for list="{{ termFields }}" as="t" hint-placeholder-count="4">
+                <div>
+                  <label style="display:block;font-size:11.5px;font-weight:500;color:#667085;margin-bottom:6px">{{ t.label }}</label>
+                  <div style="border:1px solid var(--line);border-radius:7px;padding:9px 11px;font-size:14px;font-weight:600;font-family:'IBM Plex Mono',monospace">{{ t.value }}</div>
+                  <div style="font-size:11px;color:#98a2b3;margin-top:5px">{{ t.note }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- line items -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between">
+              <span style="font-weight:600;font-size:14px">Line Items (BOQ)</span>
+              <span style="font-size:12px;color:var(--accent,#3a5bd9);font-weight:600;cursor:pointer">+ Add item</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              <thead>
+                <tr style="text-align:left;color:#667085;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;background:#fafbfc">
+                  <th style="padding:9px 14px;font-weight:600">Code</th>
+                  <th style="padding:9px 14px;font-weight:600">Oracle PR Line</th>
+                  <th style="padding:9px 14px;font-weight:600">Description</th>
+                  <th style="padding:9px 14px;font-weight:600;text-align:right">Qty</th>
+                  <th style="padding:9px 14px;font-weight:600">UoM</th>
+                  <th style="padding:9px 14px;font-weight:600;text-align:right">Unit Rate</th>
+                  <th style="padding:9px 14px;font-weight:600;text-align:right">Budget</th>
+                  <th style="padding:9px 14px;font-weight:600;text-align:right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ lineItems }}" as="li" hint-placeholder-count="5">
+                  <tr style="border-top:1px solid #f0f1f4">
+                    <td style="padding:10px 14px;font-family:'IBM Plex Mono',monospace;color:#475467">{{ li.code }}</td>
+                    <td style="padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--accent,#3a5bd9)">{{ li.pr }}</td>
+                    <td style="padding:10px 14px">{{ li.desc }}</td>
+                    <td style="padding:10px 14px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ li.qty }}</td>
+                    <td style="padding:10px 14px;color:#667085">{{ li.uom }}</td>
+                    <td style="padding:10px 14px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ li.rate }}</td>
+                    <td style="padding:10px 14px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#667085">{{ li.budget }}</td>
+                    <td style="padding:10px 14px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600">{{ li.total }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- summary rail -->
+        <div style="position:sticky;top:90px;display:flex;flex-direction:column;gap:16px">
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:14px">Contract Summary</div>
+            <sc-for list="{{ summaryRows }}" as="r" hint-placeholder-count="6">
+              <div style="padding:8px 0;border-bottom:1px solid #f4f5f7;font-size:13px">
+                <div style="display:flex;justify-content:space-between;gap:10px">
+                  <span style="color:#667085">{{ r.label }}</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-weight:{{ r.weight }};color:{{ r.color }};text-align:right">{{ r.value }}</span>
+                </div>
+                <sc-if value="{{ r.cap }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:11px;line-height:1.4;color:#98a2b3;margin-top:4px">{{ r.cap }}</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+            <div style="font-weight:600;font-size:13.5px;margin-bottom:10px">SLA Package</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ slaTags }}" as="t" hint-placeholder-count="4">
+                <span style="font-size:11.5px;font-weight:500;padding:5px 10px;border-radius:20px;background:color-mix(in srgb, var(--accent,#3a5bd9) 8%, #fff);color:var(--accent,#3a5bd9)">{{ t }}</span>
+              </sc-for>
+            </div>
+            <div style="margin-top:14px;font-size:12px;color:#667085;display:flex;align-items:center;gap:8px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#98a2b3" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg>
+              3 documents attached
+            </div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button style="flex:1;background:#fff;border:1px solid var(--line);border-radius:8px;padding:11px;font-size:13px;font-weight:600;color:#475467;cursor:pointer">Save Draft</button>
+            <button style="flex:1;background:var(--accent,#3a5bd9);border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:600;color:#fff;cursor:pointer" style-hover="filter:brightness(1.08)">Submit for Approval</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CONTRACT TRACKING ============ -->
+      <sc-if value="{{ isTracking }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:18px;max-width:1280px">
+        <!-- contract head -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:var(--accent,#3a5bd9)">{{ trk.id }}</span>
+              <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;color:#12805c;background:#e6f4ee">{{ trk.status }}</span>
+            </div>
+            <div style="font-size:17px;font-weight:600;margin-top:4px">{{ trk.vendor }}</div>
+            <div style="font-size:12.5px;color:#667085">{{ trk.type }} · {{ trk.project }}</div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+              <span style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;padding:4px 10px;border-radius:7px;background:color-mix(in srgb, var(--accent,#3a5bd9) 8%, #fff);color:var(--accent,#3a5bd9)">Oracle PO <span style="font-family:'IBM Plex Mono',monospace;font-weight:600">{{ trk.po }}</span> · {{ trk.poRev }}</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;padding:4px 10px;border-radius:7px;background:#f0f1f4;color:#475467">Source PR <span style="font-family:'IBM Plex Mono',monospace;font-weight:600">{{ trk.pr }}</span></span>
+            </div>
+            <div style="font-size:11px;color:#98a2b3;margin-top:6px;max-width:440px;line-height:1.4">PO auto-created in Oracle on approval; Source PR is the approved Oracle requisition that triggered this contract.</div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;gap:26px">
+            <div><div style="font-size:11px;color:#98a2b3">Overall Progress</div><div style="font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace">{{ trk.progress }}</div></div>
+            <div><div style="font-size:11px;color:#98a2b3">Remaining Duration</div><div style="font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace">{{ trk.remainMonths }}</div></div>
+            <div><div style="font-size:11px;color:#98a2b3">Expires</div><div style="font-size:20px;font-weight:700;font-family:'IBM Plex Mono',monospace">{{ trk.expiry }}</div></div>
+          </div>
+        </div>
+
+        <!-- financial cards -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+          <sc-for list="{{ trkFinance }}" as="f" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:16px">
+              <div style="font-size:11.5px;color:#667085;margin-bottom:8px">{{ f.label }}</div>
+              <div style="font-size:19px;font-weight:700;font-family:'IBM Plex Mono',monospace">{{ f.value }}</div>
+              <div style="font-size:11.5px;margin-top:5px;color:{{ f.color }}">{{ f.note }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- retention / advance / payable -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <sc-for list="{{ trkTrackers }}" as="t" hint-placeholder-count="3">
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <span style="font-weight:600;font-size:13.5px">{{ t.title }}</span>
+                <span style="font-size:11px;color:#98a2b3">{{ t.sub }}</span>
+              </div>
+              <div style="height:9px;background:#f0f1f4;border-radius:6px;overflow:hidden;margin-bottom:14px">
+                <div style="height:100%;border-radius:6px;width:{{ t.barW }};background:{{ t.barColor }}"></div>
+              </div>
+              <sc-for list="{{ t.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px;border-bottom:1px solid #f6f7f9">
+                  <span style="color:#667085">{{ r.k }}</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-weight:{{ r.w }};color:{{ r.c }}">{{ r.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- IPC schedule -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">Progress Payment Certificates (IPC)</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead>
+              <tr style="text-align:left;color:#667085;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;background:#fafbfc">
+                <th style="padding:10px 16px;font-weight:600">IPC</th>
+                <th style="padding:10px 16px;font-weight:600">Period</th>
+                <th style="padding:10px 16px;font-weight:600;text-align:right">Work Done</th>
+                <th style="padding:10px 16px;font-weight:600;text-align:right">Gross</th>
+                <th style="padding:10px 16px;font-weight:600;text-align:right">Retention</th>
+                <th style="padding:10px 16px;font-weight:600;text-align:right">Advance Rec.</th>
+                <th style="padding:10px 16px;font-weight:600;text-align:right">Net Payable</th>
+                <th style="padding:10px 16px;font-weight:600">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ ipcRows }}" as="i" hint-placeholder-count="4">
+                <tr style="border-top:1px solid #f0f1f4">
+                  <td style="padding:11px 16px;font-family:'IBM Plex Mono',monospace;font-weight:600">{{ i.n }}</td>
+                  <td style="padding:11px 16px;color:#475467">{{ i.period }}</td>
+                  <td style="padding:11px 16px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ i.done }}</td>
+                  <td style="padding:11px 16px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ i.gross }}</td>
+                  <td style="padding:11px 16px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#b45309">{{ i.ret }}</td>
+                  <td style="padding:11px 16px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#2c7fb0">{{ i.adv }}</td>
+                  <td style="padding:11px 16px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600">{{ i.net }}</td>
+                  <td style="padding:11px 16px"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;color:{{ i.color }};background:{{ i.bg }}">{{ i.status }}</span></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ MANPOWER RECONCILIATION ============ -->
+      <sc-if value="{{ isManpower }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:18px;max-width:1320px">
+        <!-- context bar -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:16px 20px;display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:11px;color:#98a2b3">Contract</div>
+            <div style="font-weight:600;font-size:14px"><span style="font-family:'IBM Plex Mono',monospace;color:var(--accent,#3a5bd9)">SC-2024-0155</span> · Transguard Group</div>
+          </div>
+          <div style="width:1px;height:34px;background:var(--line)"></div>
+          <div><div style="font-size:11px;color:#98a2b3">Period</div><div style="font-weight:600;font-size:14px">February 2026</div></div>
+          <div style="width:1px;height:34px;background:var(--line)"></div>
+          <div><div style="font-size:11px;color:#98a2b3">Source</div><div style="font-weight:600;font-size:14px">HCM Attendance · post salary-close</div></div>
+          <div style="flex:1"></div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:#98a2b3">Net Variance</div>
+            <div style="font-weight:700;font-size:18px;font-family:'IBM Plex Mono',monospace;color:#c0362c">+ SAR 2,370</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:11px;font-size:12.5px;color:#667085;align-items:center">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#12805c"></span>Matched to contract rate</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#b45309"></span>Variance — review</span>
+          <span style="margin-left:auto;font-style:italic">Contract rates (incl. OT) are the baseline for all calculations</span>
+        </div>
+
+        <!-- reconciliation table -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead>
+              <tr style="color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.03em;background:#fafbfc">
+                <th style="padding:10px 14px;font-weight:600;text-align:left">Job Title</th>
+                <th style="padding:10px 10px;font-weight:600;text-align:right;border-left:1px solid var(--line)">Reg Hrs</th>
+                <th style="padding:10px 10px;font-weight:600;text-align:right">Rate</th>
+                <th style="padding:10px 10px;font-weight:600;text-align:right">OT Hrs</th>
+                <th style="padding:10px 10px;font-weight:600;text-align:right">OT Rate</th>
+                <th style="padding:10px 12px;font-weight:600;text-align:right;background:#f2f6fc">Contract Amount</th>
+                <th style="padding:10px 12px;font-weight:600;text-align:right;border-left:1px solid var(--line)">Invoiced</th>
+                <th style="padding:10px 12px;font-weight:600;text-align:right">Variance</th>
+                <th style="padding:10px 14px;font-weight:600;text-align:center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ mpRows }}" as="m" hint-placeholder-count="5">
+                <tr style="border-top:1px solid #f0f1f4">
+                  <td style="padding:11px 14px;font-weight:600">{{ m.title }}</td>
+                  <td style="padding:11px 10px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ m.reg }}</td>
+                  <td style="padding:11px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#667085">{{ m.regRate }}</td>
+                  <td style="padding:11px 10px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ m.ot }}</td>
+                  <td style="padding:11px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#667085">{{ m.otRate }}</td>
+                  <td style="padding:11px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;background:#f8fafd">{{ m.contract }}</td>
+                  <td style="padding:11px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;border-left:1px solid #f0f1f4">{{ m.invoiced }}</td>
+                  <td style="padding:11px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;color:{{ m.varColor }}">{{ m.variance }}</td>
+                  <td style="padding:11px 14px;text-align:center"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;color:{{ m.color }};background:{{ m.bg }}">{{ m.status }}</span></td>
+                </tr>
+              </sc-for>
+              <tr style="border-top:2px solid var(--line);background:#fafbfc;font-weight:700">
+                <td style="padding:12px 14px">Total</td>
+                <td colspan="4"></td>
+                <td style="padding:12px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;background:#f2f6fc">{{ mpTotal.contract }}</td>
+                <td style="padding:12px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;border-left:1px solid var(--line)">{{ mpTotal.invoiced }}</td>
+                <td style="padding:12px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#c0362c">{{ mpTotal.variance }}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="flex:1;background:#fbf1e3;border:1px solid #f0dcc0;border-radius:var(--radius,10px);padding:13px 16px;font-size:12.5px;color:#7a4a12;display:flex;gap:10px;align-items:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.7 3.86a2 2 0 00-3.42 0z"/></svg>
+            <span><strong>Cleaner</strong> — OT hours invoiced (250) exceed HCM-recorded OT (210). SAR 2,370 overbilled at contract OT rate. Adjust invoice or attach approved overtime authorisation.</span>
+          </div>
+          <button style="background:#fff;border:1px solid var(--line);border-radius:8px;padding:11px 16px;font-size:13px;font-weight:600;color:#475467;cursor:pointer">Raise Dispute</button>
+          <button style="background:var(--accent,#3a5bd9);border:none;border-radius:8px;padding:11px 16px;font-size:13px;font-weight:600;color:#fff;cursor:pointer">Approve Matched (SAR 321,118)</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ APPLY PENALTY ============ -->
+      <sc-if value="{{ isPenalty }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1fr 380px;gap:22px;max-width:1200px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <!-- penalty detail -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--accent,#3a5bd9)">PN-2026-004</span>
+              <span style="font-weight:600;font-size:14px">Penalty — Berkeley Services</span>
+              <span style="margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;color:#b45309;background:#fbf1e3">In Approval</span>
+            </div>
+            <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:16px 22px">
+              <sc-for list="{{ penFields }}" as="p" hint-placeholder-count="6">
+                <div>
+                  <div style="font-size:11.5px;color:#667085;margin-bottom:5px">{{ p.label }}</div>
+                  <div style="font-size:14px;font-weight:{{ p.weight }};color:{{ p.color }}">{{ p.value }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding:14px 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:9px;font-size:12.5px;color:#475467;background:#fafbfc">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#3a5bd9)" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg>
+              <span style="font-weight:600;color:var(--accent,#3a5bd9)">Inspection_Report_Jan2026.pdf</span>
+              <span style="color:#98a2b3">· mandatory attachment provided</span>
+            </div>
+          </div>
+          <!-- linked SLA -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+            <div style="font-weight:600;font-size:13.5px;margin-bottom:12px">Linked SLA Breach</div>
+            <div style="display:flex;gap:14px;align-items:center;padding:12px 14px;background:#fbeceb;border:1px solid #f3d3d0;border-radius:8px">
+              <div style="font-size:24px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:#c0362c">84%</div>
+              <div style="font-size:12.5px;color:#7a2b25"><strong>Cleaning Quality Score</strong> vs SLA target ≥ 90% — breached in Dec &amp; Jan. Penalty computed at 2% of monthly service charge.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- approval chain -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:20px">
+          <div style="font-weight:600;font-size:14px;margin-bottom:6px">Approval Route</div>
+          <div style="font-size:12px;color:#667085;margin-bottom:18px">Debited to supplier account only after CFO approval</div>
+          <div style="position:relative">
+            <sc-for list="{{ penSteps }}" as="st" hint-placeholder-count="6">
+              <div style="display:flex;gap:14px;padding-bottom:20px;position:relative">
+                <div style="display:flex;flex-direction:column;align-items:center;flex:none">
+                  <div style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;background:{{ st.dotBg }};border:2px solid {{ st.dotBorder }}">
+                    <span style="color:{{ st.tickColor }};font-size:13px;font-weight:700">{{ st.icon }}</span>
+                  </div>
+                  <div style="width:2px;flex:1;background:{{ st.lineColor }};margin-top:3px;min-height:14px"></div>
+                </div>
+                <div style="padding-top:1px">
+                  <div style="font-weight:600;font-size:13px;color:{{ st.titleColor }}">{{ st.role }}</div>
+                  <div style="font-size:12px;color:#667085">{{ st.name }}</div>
+                  <div style="font-size:11px;color:{{ st.metaColor }};margin-top:3px;font-weight:500">{{ st.meta }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ EVALUATION ============ -->
+      <sc-if value="{{ isEvaluation }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:18px;max-width:1280px">
+        <!-- tabs -->
+        <div style="display:flex;gap:4px;background:#eef0f3;border-radius:9px;padding:4px;width:fit-content">
+          <sc-for list="{{ evalTabs }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start">
+          <!-- scorecard -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <!-- meta -->
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:16px 18px;display:flex;gap:26px;flex-wrap:wrap">
+              <sc-for list="{{ evalMeta }}" as="m" hint-placeholder-count="4">
+                <div><div style="font-size:11px;color:#98a2b3">{{ m.k }}</div><div style="font-weight:600;font-size:13.5px;margin-top:2px">{{ m.v }}</div></div>
+              </sc-for>
+            </div>
+
+            <!-- KPI table -->
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                <thead>
+                  <tr style="color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.03em;background:#fafbfc;text-align:left">
+                    <th style="padding:10px 14px;font-weight:600">Category</th>
+                    <th style="padding:10px 14px;font-weight:600">KPI</th>
+                    <th style="padding:10px 10px;font-weight:600;text-align:center">SLA Target</th>
+                    <th style="padding:10px 10px;font-weight:600;text-align:right">Weight</th>
+                    <th style="padding:10px 10px;font-weight:600;text-align:right">Actual</th>
+                    <th style="padding:10px 10px;font-weight:600;text-align:right">Score</th>
+                    <th style="padding:10px 14px;font-weight:600;text-align:right">Weighted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ evalRows }}" as="r" hint-placeholder-count="12">
+                    <tr style="border-top:1px solid #f0f1f4">
+                      <td style="padding:9px 14px;color:{{ r.catColor }};font-weight:{{ r.catWeight }}">{{ r.cat }}</td>
+                      <td style="padding:9px 14px;color:#344054">{{ r.kpi }}</td>
+                      <td style="padding:9px 10px;text-align:center;font-family:'IBM Plex Mono',monospace;color:#667085">{{ r.target }}</td>
+                      <td style="padding:9px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#667085">{{ r.weight }}</td>
+                      <td style="padding:9px 10px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ r.actual }}</td>
+                      <td style="padding:9px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;color:{{ r.scoreColor }}">{{ r.score }}</td>
+                      <td style="padding:9px 14px;text-align:right;font-family:'IBM Plex Mono',monospace">{{ r.weighted }}</td>
+                    </tr>
+                  </sc-for>
+                  <tr style="border-top:2px solid var(--line);background:#fafbfc;font-weight:700">
+                    <td colspan="3" style="padding:12px 14px">Total Weighted Score</td>
+                    <td style="padding:12px 10px;text-align:right;font-family:'IBM Plex Mono',monospace">100</td>
+                    <td></td><td></td>
+                    <td style="padding:12px 14px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:14px">{{ evalTotal }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- rating rail -->
+          <div style="display:flex;flex-direction:column;gap:16px;position:sticky;top:90px">
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:20px;text-align:center">
+              <div style="font-size:12px;color:#667085;margin-bottom:10px">Overall Score</div>
+              <div style="font-size:44px;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1;color:{{ evalRating.color }}">{{ evalTotal }}</div>
+              <div style="display:inline-block;margin-top:12px;font-size:12.5px;font-weight:600;padding:5px 14px;border-radius:20px;color:{{ evalRating.color }};background:{{ evalRating.bg }}">{{ evalRating.label }}</div>
+              <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px;text-align:left">
+                <sc-for list="{{ evalCats }}" as="c" hint-placeholder-count="5">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px"><span style="color:#475467">{{ c.label }}</span><span style="font-family:'IBM Plex Mono',monospace;color:#667085">{{ c.val }}</span></div>
+                    <div style="height:6px;background:#f0f1f4;border-radius:6px;overflow:hidden"><div style="height:100%;border-radius:6px;width:{{ c.width }};background:{{ c.color }}"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:16px">
+              <div style="font-weight:600;font-size:12.5px;margin-bottom:10px">Penalty / Incentive</div>
+              <sc-for list="{{ evalAdj }}" as="a" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12.5px"><span style="color:#667085">{{ a.k }}</span><span style="font-family:'IBM Plex Mono',monospace;font-weight:{{ a.w }};color:{{ a.c }}">{{ a.v }}</span></div>
+              </sc-for>
+            </div>
+            <div style="background:#fafbfc;border:1px solid var(--line);border-radius:var(--radius,10px);padding:14px 16px">
+              <div style="font-weight:600;font-size:11.5px;color:#667085;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Rating Guide</div>
+              <sc-for list="{{ ratingGuide }}" as="g" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px"><span style="width:9px;height:9px;border-radius:2px;background:{{ g.color }}"></span><span style="font-family:'IBM Plex Mono',monospace;color:#667085;width:64px">{{ g.range }}</span><span style="color:#475467">{{ g.label }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CHANGE ORDERS ============ -->
+      <sc-if value="{{ isChangeOrder }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1fr 330px;gap:22px;max-width:1280px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <!-- CO context -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:16px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--accent,#3a5bd9)">CO-2026-003</span>
+                <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;color:#b45309;background:#fbf1e3">In Approval</span>
+              </div>
+              <div style="font-size:15px;font-weight:600;margin-top:3px">Quantity variation — Additional fire &amp; life-safety units</div>
+              <div style="font-size:12.5px;color:#667085">Contract <span style="font-family:'IBM Plex Mono',monospace;color:var(--accent,#3a5bd9)">SC-2024-0142</span> · Emrill Services · PO <span style="font-family:'IBM Plex Mono',monospace">PO-ORA-448120</span></div>
+            </div>
+            <div style="flex:1"></div>
+            <button style="background:var(--accent,#3a5bd9);border:none;border-radius:8px;padding:10px 15px;font-size:13px;font-weight:600;color:#fff;cursor:pointer">+ New Change Order</button>
+          </div>
+
+          <!-- affected line items -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+              <span style="font-weight:600;font-size:14px">Affected Line Items</span>
+              <span style="font-size:11px;color:#98a2b3">Unit rates locked to contract baseline</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              <thead>
+                <tr style="text-align:left;color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.03em;background:#fafbfc">
+                  <th style="padding:10px 14px;font-weight:600">Code</th>
+                  <th style="padding:10px 14px;font-weight:600">Description</th>
+                  <th style="padding:10px 12px;font-weight:600;text-align:right">Original Qty</th>
+                  <th style="padding:10px 12px;font-weight:600;text-align:right">Revised Qty</th>
+                  <th style="padding:10px 12px;font-weight:600;text-align:right">Δ Qty</th>
+                  <th style="padding:10px 12px;font-weight:600;text-align:right">Contract Rate</th>
+                  <th style="padding:10px 14px;font-weight:600;text-align:right">Value Impact</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ coRows }}" as="c" hint-placeholder-count="2">
+                  <tr style="border-top:1px solid #f0f1f4">
+                    <td style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;color:#475467">{{ c.code }}</td>
+                    <td style="padding:11px 14px">{{ c.desc }}</td>
+                    <td style="padding:11px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#667085">{{ c.orig }}</td>
+                    <td style="padding:11px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600">{{ c.rev }}</td>
+                    <td style="padding:11px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;color:{{ c.deltaColor }}">{{ c.delta }}</td>
+                    <td style="padding:11px 12px;text-align:right;font-family:'IBM Plex Mono',monospace;color:#667085">{{ c.rate }}</td>
+                    <td style="padding:11px 14px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;color:{{ c.impactColor }}">{{ c.impact }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- CO history -->
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">Change Order History — SC-2024-0142</div>
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              <thead>
+                <tr style="text-align:left;color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.03em;background:#fafbfc">
+                  <th style="padding:10px 14px;font-weight:600">CO #</th>
+                  <th style="padding:10px 14px;font-weight:600">Reason</th>
+                  <th style="padding:10px 14px;font-weight:600;text-align:right">Impact</th>
+                  <th style="padding:10px 14px;font-weight:600">PO Revision</th>
+                  <th style="padding:10px 14px;font-weight:600">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ coHistory }}" as="h" hint-placeholder-count="3">
+                  <tr style="border-top:1px solid #f0f1f4">
+                    <td style="padding:11px 14px;font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--accent,#3a5bd9)">{{ h.id }}</td>
+                    <td style="padding:11px 14px;color:#344054">{{ h.reason }}</td>
+                    <td style="padding:11px 14px;text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;color:{{ h.impactColor }}">{{ h.impact }}</td>
+                    <td style="padding:11px 14px;color:#667085;font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ h.po }}</td>
+                    <td style="padding:11px 14px"><span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;color:{{ h.color }};background:{{ h.bg }}">{{ h.status }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CO rail -->
+        <div style="display:flex;flex-direction:column;gap:16px;position:sticky;top:90px">
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:14px">Revised Contract Value</div>
+            <sc-for list="{{ coValueRows }}" as="r" hint-placeholder-count="5">
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f4f5f7;font-size:13px">
+                <span style="color:#667085">{{ r.k }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-weight:{{ r.w }};color:{{ r.c }}">{{ r.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius,10px);padding:18px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">Approval &amp; PO Revision</div>
+            <div style="font-size:12px;color:#667085;margin-bottom:16px">Approved CO revises the Oracle PO</div>
+            <sc-for list="{{ coSteps }}" as="st" hint-placeholder-count="4">
+              <div style="display:flex;gap:13px;padding-bottom:16px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex:none">
+                  <div style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;background:{{ st.dotBg }};border:2px solid {{ st.dotBorder }}">
+                    <span style="color:{{ st.tickColor }};font-size:12px;font-weight:700">{{ st.icon }}</span>
+                  </div>
+                  <div style="width:2px;flex:1;background:{{ st.lineColor }};margin-top:3px;min-height:12px"></div>
+                </div>
+                <div style="padding-top:1px">
+                  <div style="font-weight:600;font-size:12.5px;color:{{ st.titleColor }}">{{ st.role }}</div>
+                  <div style="font-size:11.5px;color:#667085">{{ st.name }}</div>
+                  <div style="font-size:11px;color:{{ st.metaColor }};margin-top:2px;font-weight:500">{{ st.meta }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- __SCREENS_ANCHOR__ -->
+
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#3a5bd9&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#3a5bd9&quot;,&quot;#0f766e&quot;,&quot;#7c3aed&quot;,&quot;#b45309&quot;]},&quot;cornerStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Soft&quot;,&quot;options&quot;:[&quot;Soft&quot;,&quot;Sharp&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Comfortable&quot;,&quot;options&quot;:[&quot;Comfortable&quot;,&quot;Compact&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { screen: 'dashboard', evalTab: 'jr', selectedContract: 'SC-2024-0142' };
+
+  componentDidMount() { this.applyTheme(); }
+  componentDidUpdate() { this.applyTheme(); }
+  applyTheme() {
+    const r = document.documentElement;
+    r.style.setProperty('--accent', this.props.accentColor || '#3a5bd9');
+    r.style.setProperty('--radius', (this.props.cornerStyle === 'Sharp') ? '3px' : '10px');
+    r.style.setProperty('--pad', (this.props.density === 'Compact') ? '13px' : '18px');
+  }
+
+  nav = (s) => () => this.setState({ screen: s });
+  setTab = (t) => () => this.setState({ evalTab: t });
+  openContract = (id) => () => this.setState({ selectedContract: id, screen: 'tracking' });
+
+  money(n) { return 'SAR ' + Math.round(n).toLocaleString('en-US'); }
+
+  scoreKPI(actual, target, dir) {
+    if (dir === 'zero') return actual === 0 ? 100 : 0;
+    if (dir === 'lower') return actual <= target ? 100 : Math.max(0, Math.min(1, target / actual) * 100);
+    return Math.min(1, actual / target) * 100; // higher
+  }
+  rating(score) {
+    if (score >= 90) return { label: 'Excellent', color: '#12805c', bg: '#e6f4ee' };
+    if (score >= 80) return { label: 'Good', color: '#177245', bg: '#e9f5ee' };
+    if (score >= 70) return { label: 'Acceptable', color: '#b45309', bg: '#fbf1e3' };
+    if (score >= 60) return { label: 'Poor', color: '#b54708', bg: '#fbeee3' };
+    return { label: 'Unsatisfactory', color: '#c0362c', bg: '#fbeceb' };
+  }
+
+  renderVals() {
+    const s = this.state.screen;
+    const fmt = (n) => Math.round(n).toLocaleString('en-US');
+    const titles = {
+      dashboard: ['Portfolio Dashboard', 'Overview of subcontracts, spend, retention and alerts'],
+      contracts: ['Contracts', 'All subcontracts across projects and service types'],
+      create: ['New Subcontract', 'Create a scope or manpower subcontract from an approved PR'],
+      tracking: ['Contract Tracking', 'Progress-linked payments, retention and advance recovery'],
+      manpower: ['Manpower Reconciliation', 'Timesheet vs contract rates vs vendor invoice'],
+      changeorder: ['Change Orders', 'Vary contract quantities and revise the Oracle PO'],
+      penalty: ['Apply Penalty', 'Raise and route a penalty for approval'],
+      evaluation: ['Subcontractor Evaluation', 'Performance scorecards and ratings'],
+    };
+    const navItems = [
+      { isGroup: true, label: 'Overview' },
+      { id: 'dashboard', label: 'Portfolio Dashboard' },
+      { id: 'contracts', label: 'Contracts' },
+      { isGroup: true, label: 'Manage' },
+      { id: 'create', label: 'New Contract' },
+      { id: 'tracking', label: 'Contract Tracking' },
+      { id: 'manpower', label: 'Manpower Reconciliation' },
+      { id: 'changeorder', label: 'Change Orders' },
+      { isGroup: true, label: 'Governance' },
+      { id: 'penalty', label: 'Apply Penalty' },
+      { id: 'evaluation', label: 'Evaluations' },
+    ].map(it => {
+      if (it.isGroup) return it;
+      const active = it.id === s;
+      return {
+        ...it, active, onClick: this.nav(it.id),
+        dot: active ? '#fff' : '#5b667e',
+        style: {
+          display: 'flex', alignItems: 'center', gap: '11px', width: '100%',
+          padding: '9px 12px', marginBottom: '2px', border: 'none', borderRadius: '8px',
+          fontSize: '13px', fontWeight: active ? 600 : 500, cursor: 'pointer', textAlign: 'left',
+          background: active ? 'rgba(255,255,255,.09)' : 'transparent',
+          color: active ? '#fff' : '#c3cad9',
+        },
+      };
+    });
+
+    const kpis = [
+      { label: 'Active Contracts', value: '24', delta: '+3 this quarter', deltaColor: '#12805c' },
+      { label: 'Portfolio Value', value: 'SAR 68.4M', delta: 'across 9 projects', deltaColor: '#667085' },
+      { label: 'Executed Spend', value: 'SAR 41.2M', delta: '60% committed', deltaColor: '#667085' },
+      { label: 'Retention Held', value: 'SAR 3.9M', delta: 'SAR 0.4M releasable', deltaColor: '#b45309' },
+      { label: 'Advance Outstanding', value: 'SAR 2.1M', delta: 'to recover', deltaColor: '#b45309' },
+      { label: 'Expiring ≤30d', value: '3', delta: 'renew or close', deltaColor: '#c0362c' },
+    ];
+    const alerts = [
+      { title: 'ENGIE Cofely — contract expiring in 21 days', detail: 'SC-2023-0210 · Airport Terminal · 96% complete', tag: 'Expiring', color: '#b45309', bg: '#fbf1e3' },
+      { title: 'Berkeley Services — SLA breach (Cleaning Quality)', detail: 'Below 90% for 2 consecutive months → penalty eligible', tag: 'SLA', color: '#c0362c', bg: '#fbeceb' },
+      { title: 'Al Faris — progress 8% behind baseline plan', detail: 'SC-2025-0031 · Dubai Hills Villas · look-ahead slipping', tag: 'Progress', color: '#c0362c', bg: '#fbeceb' },
+      { title: 'Emrill Services — IPC #4 awaiting certification', detail: 'SAR 233,200 net payable pending Finance', tag: 'Payment', color: '#3a5bd9', bg: '#eef1fd' },
+      { title: '2 subcontractors trending "Unsatisfactory"', detail: 'Hard FM & Soft Services scorecards below 60%', tag: 'Performance', color: '#b45309', bg: '#fbf1e3' },
+    ];
+    const serviceMix = [
+      { label: 'Hard FM (MEP)', amount: 'SAR 23.3M', pct: '34%', width: '34%', color: '#3a5bd9' },
+      { label: 'Manpower Supply', amount: 'SAR 16.4M', pct: '24%', width: '24%', color: '#4b9fd1' },
+      { label: 'Construction / JR', amount: 'SAR 15.0M', pct: '22%', width: '22%', color: '#7a5bd9' },
+      { label: 'Soft Services', amount: 'SAR 13.7M', pct: '20%', width: '20%', color: '#12a679' },
+    ];
+    const approvals = [
+      { ref: 'SC-2025-0051', item: 'New contract approval', vendor: 'Khansaheb FM', stage: 'Procurement Director', amount: 'SAR 5.4M', age: '2 days', color: '#b45309', bg: '#fbf1e3' },
+      { ref: 'PN-2026-004', item: 'Penalty approval', vendor: 'Berkeley Services', stage: 'Awaiting CFO', amount: 'SAR 42,500', age: '4 days', color: '#c0362c', bg: '#fbeceb' },
+      { ref: 'IPC-0142-04', item: 'Progress payment', vendor: 'Emrill Services', stage: 'Finance certify', amount: 'SAR 233,200', age: '1 day', color: '#3a5bd9', bg: '#eef1fd' },
+      { ref: 'MPR-0155-02', item: 'Manpower invoice', vendor: 'Transguard', stage: 'Qty variance review', amount: 'SAR 323,488', age: 'Today', color: '#12805c', bg: '#e6f4ee' },
+    ];
+
+    const typeStyle = {
+      'Hard FM (MEP)': ['#3a5bd9', '#eef1fd'], 'Manpower': ['#2c7fb0', '#e7f1f8'],
+      'Construction / JR': ['#7a5bd9', '#f0ecfb'], 'Soft Services': ['#12805c', '#e6f4ee'],
+    };
+    const statusStyle = {
+      Active: ['#12805c', '#e6f4ee'], Expiring: ['#b45309', '#fbf1e3'],
+      Closing: ['#2c7fb0', '#e7f1f8'], Draft: ['#667085', '#f0f1f4'], Pending: ['#b45309', '#fbf1e3'],
+    };
+    const rawContracts = [
+      { id: 'SC-2024-0142', vendor: 'Emrill Services', type: 'Hard FM (MEP)', project: 'Marina Gate Towers', value: 4200000, progress: 62, expiry: '31 Mar 2027', status: 'Active' },
+      { id: 'SC-2024-0155', vendor: 'Transguard Group', type: 'Manpower', project: 'Facilities — multi-site', value: 6800000, progress: 74, expiry: '15 Aug 2026', status: 'Active' },
+      { id: 'SC-2025-0031', vendor: 'Al Faris Contracting', type: 'Construction / JR', project: 'Dubai Hills Villas', value: 12500000, progress: 38, expiry: '01 Dec 2026', status: 'Active' },
+      { id: 'SC-2024-0098', vendor: 'Berkeley Services', type: 'Soft Services', project: 'Business Bay Offices', value: 2150000, progress: 88, expiry: '28 Feb 2026', status: 'Expiring' },
+      { id: 'SC-2025-0044', vendor: 'Imdaad', type: 'Soft Services', project: 'Community Parks', value: 1760000, progress: 21, expiry: '31 Jan 2027', status: 'Active' },
+      { id: 'SC-2023-0210', vendor: 'ENGIE Cofely', type: 'Hard FM (MEP)', project: 'Airport Terminal 2', value: 9300000, progress: 96, expiry: '31 Jan 2026', status: 'Closing' },
+      { id: 'SC-2025-0051', vendor: 'Khansaheb FM', type: 'Hard FM (MEP)', project: 'Expo City Offices', value: 5400000, progress: 0, expiry: '—', status: 'Pending' },
+    ];
+    const contracts = rawContracts.map(c => {
+      const pc = c.progress >= 80 ? '#12805c' : c.progress >= 40 ? '#3a5bd9' : '#b45309';
+      return {
+        ...c, valueFmt: this.money(c.value), progress: c.progress + '%', progressW: c.progress + '%', progressColor: pc,
+        typeColor: (typeStyle[c.type] || ['#667085', '#f0f1f4'])[0], typeBg: (typeStyle[c.type] || ['#667085', '#f0f1f4'])[1],
+        statusColor: statusStyle[c.status][0], statusBg: statusStyle[c.status][1], open: this.openContract(c.id),
+      };
+    });
+    const contractFilters = [
+      { label: 'Project', value: 'All' }, { label: 'Service Type', value: 'All' },
+      { label: 'Vendor', value: 'All' }, { label: 'Status', value: 'Active' }, { label: 'Expiry', value: 'Any' },
+    ];
+
+    // ---- CREATE ----
+    const headerFields = [
+      { label: 'Contractor Name', value: 'Emrill Services LLC', hint: '', span: 'span 1', bg: '#fff', color: '#101828' },
+      { label: 'Contractor No.', value: 'V-100482', hint: '', span: 'span 1', bg: '#fafbfc', color: '#475467' },
+      { label: 'Contract Type', value: 'Hard FM (MEP)', hint: '', span: 'span 1', bg: '#fff', color: '#101828' },
+      { label: 'Contract Number', value: 'SC-2026-0071', hint: 'auto', span: 'span 1', bg: '#fafbfc', color: '#475467' },
+      { label: 'Contract Duration', value: '24 months', hint: '', span: 'span 1', bg: '#fff', color: '#101828' },
+      { label: 'Project Name', value: 'Marina Gate Towers', hint: '', span: 'span 1', bg: '#fff', color: '#101828' },
+      { label: 'Project Number', value: 'PRJ-0219', hint: '', span: 'span 1', bg: '#fafbfc', color: '#475467' },
+      { label: 'Contract Value', value: 'SAR 4,200,000', hint: '', span: 'span 1', bg: '#fff', color: '#101828' },
+      { label: 'Contract Budget', value: 'SAR 4,350,000', hint: '', span: 'span 1', bg: '#fff', color: '#101828' },
+    ];
+    const termFields = [
+      { label: 'Retention %', value: '10%', note: 'Held per IPC, released on handover' },
+      { label: 'Advance Payment %', value: '10%', note: 'Down payment on mobilisation' },
+      { label: 'Advance Amount', value: 'SAR 420,000', note: 'Recovered pro-rata to progress' },
+      { label: 'Payable Terms', value: '45 days', note: 'From certified IPC date' },
+    ];
+    const lineItems = [
+      { code: 'MEP-01', pr: 'PR-0123 · L10', desc: 'HVAC preventive maintenance — 12 months', qty: '12', uom: 'month', rate: '95,000', budget: '1,180,000', total: '1,140,000' },
+      { code: 'MEP-02', pr: 'PR-0123 · L20', desc: 'Electrical systems maintenance', qty: '12', uom: 'month', rate: '62,000', budget: '760,000', total: '744,000' },
+      { code: 'MEP-03', pr: 'PR-0123 · L30', desc: 'Plumbing & drainage', qty: '12', uom: 'month', rate: '38,000', budget: '470,000', total: '456,000' },
+      { code: 'MEP-04', pr: 'PR-0124 · L10', desc: 'BMS & controls', qty: '12', uom: 'month', rate: '41,000', budget: '500,000', total: '492,000' },
+      { code: 'MEP-05', pr: 'PR-0124 · L20', desc: 'Fire & life safety systems', qty: '12', uom: 'month', rate: '55,700', budget: '640,000', total: '668,400' },
+    ];
+    const summaryRows = [
+      { label: 'Contract Value', value: 'SAR 4,200,000', weight: 700, color: '#101828' },
+      { label: 'Contract Budget', value: 'SAR 4,350,000', weight: 500, color: '#475467' },
+      { label: 'Estimated Saving', value: 'SAR 150,000', weight: 600, color: '#12805c' },
+      { label: 'Retention (10%)', value: 'SAR 420,000', weight: 500, color: '#b45309' },
+      { label: 'Advance (10%)', value: 'SAR 420,000', weight: 500, color: '#2c7fb0' },
+      { label: 'Source PR (Oracle)', value: 'PR-0123 / PR-0124', weight: 500, color: 'var(--accent,#3a5bd9)', cap: 'Purchase Requisition approved in Oracle — the trigger that starts this contract.' },
+      { label: 'Oracle PO', value: 'Auto-created on approval', weight: 500, color: '#98a2b3', cap: 'Purchase Order is generated automatically in Oracle once the contract is approved.' },
+    ];
+    const slaTags = ['Response ≤ 4h', 'Resolution ≤ 24h', 'PM Completion ≥ 95%', 'CSAT ≥ 90%'];
+
+    // ---- CHANGE ORDERS ----
+    const coLines = [
+      { code: 'MEP-01', desc: 'HVAC preventive maintenance', orig: 12, rev: 14, rate: 95000 },
+      { code: 'MEP-03', desc: 'Plumbing & drainage', orig: 12, rev: 11, rate: 38000 },
+    ];
+    let coImpact = 0;
+    const coRows = coLines.map(l => {
+      const impact = (l.rev - l.orig) * l.rate;
+      coImpact += impact;
+      const d = l.rev - l.orig;
+      return {
+        code: l.code, desc: l.desc, orig: l.orig, rev: l.rev,
+        delta: (d > 0 ? '+' : '') + d, deltaColor: d > 0 ? '#12805c' : '#c0362c',
+        rate: fmt(l.rate), impact: (impact > 0 ? '+ ' : '− ') + 'SAR ' + fmt(Math.abs(impact)),
+        impactColor: impact > 0 ? '#12805c' : '#c0362c',
+      };
+    });
+    const coOrigVal = 4200000, coNewVal = coOrigVal + coImpact;
+    const coValueRows = [
+      { k: 'Original contract value', v: 'SAR ' + fmt(coOrigVal), w: 500, c: '#475467' },
+      { k: 'Net change impact', v: (coImpact > 0 ? '+ ' : '− ') + 'SAR ' + fmt(Math.abs(coImpact)), w: 600, c: coImpact > 0 ? '#12805c' : '#c0362c' },
+      { k: 'Revised contract value', v: 'SAR ' + fmt(coNewVal), w: 700, c: '#101828' },
+      { k: 'Retention (10%) revised', v: 'SAR ' + fmt(coNewVal * 0.1), w: 500, c: '#b45309' },
+      { k: 'Advance (10%) — unchanged', v: 'SAR ' + fmt(coOrigVal * 0.1), w: 500, c: '#2c7fb0' },
+    ];
+    const coStepsRaw = [
+      { role: 'Raised by Project Manager', name: 'R. Menon', meta: 'Qty variation logged · 08 Feb 2026', state: 'done' },
+      { role: 'QS / Cost Verification', name: 'K. Ibrahim', meta: 'Rates checked vs contract · 09 Feb 2026', state: 'done' },
+      { role: 'Procurement Director', name: 'S. Farooq', meta: 'Awaiting approval', state: 'current' },
+      { role: 'Revise PO in Oracle', name: 'PO-ORA-448120 → Rev 2', meta: 'Pending approval', state: 'pending' },
+    ];
+    const coSteps = coStepsRaw.map((st, i) => {
+      const last = i === coStepsRaw.length - 1;
+      if (st.state === 'done') return { ...st, icon: '✓', dotBg: '#12805c', dotBorder: '#12805c', tickColor: '#fff', lineColor: last ? 'transparent' : '#12805c', titleColor: '#101828', metaColor: '#12805c' };
+      if (st.state === 'current') return { ...st, icon: '', dotBg: 'color-mix(in srgb, var(--accent,#3a5bd9) 14%, #fff)', dotBorder: 'var(--accent,#3a5bd9)', tickColor: 'var(--accent,#3a5bd9)', lineColor: last ? 'transparent' : '#e6e8ec', titleColor: 'var(--accent,#3a5bd9)', metaColor: 'var(--accent,#3a5bd9)' };
+      return { ...st, icon: '', dotBg: '#fff', dotBorder: '#d5d9e0', tickColor: '#98a2b3', lineColor: last ? 'transparent' : '#e6e8ec', titleColor: '#98a2b3', metaColor: '#98a2b3' };
+    });
+    const coStatusStyle = { Approved: ['#12805c', '#e6f4ee'], 'In Approval': ['#b45309', '#fbf1e3'], Draft: ['#667085', '#f0f1f4'] };
+    const coHistory = [
+      { id: 'CO-2026-001', reason: 'Additional AHU servicing — scope increase', impact: '+ SAR 96,000', po: 'PO Rev 1', status: 'Approved' },
+      { id: 'CO-2026-002', reason: 'Descope — external drainage line', impact: '− SAR 42,000', po: 'PO Rev 1', status: 'Approved' },
+      { id: 'CO-2026-003', reason: 'Additional fire & life-safety units', impact: '+ SAR 152,000', po: 'Rev 2 pending', status: 'In Approval' },
+    ].map(c => ({ ...c, impactColor: c.impact.startsWith('+') ? '#12805c' : '#c0362c', color: coStatusStyle[c.status][0], bg: coStatusStyle[c.status][1] }));
+
+    // ---- TRACKING ----
+    const selC = rawContracts.find(c => c.id === this.state.selectedContract) || rawContracts[0];
+    const trk = {
+      id: selC.id, vendor: selC.vendor, type: selC.type, project: selC.project,
+      status: selC.status, progress: selC.progress + '%', remainMonths: '14 mo', expiry: selC.expiry,
+      po: 'PO-ORA-448120', poRev: 'Rev 1', pr: 'PR-0123 / PR-0124',
+    };
+    const trkFinance = [
+      { label: 'Contract Value', value: 'SAR 4.20M', note: 'Budget SAR 4.35M', color: '#667085' },
+      { label: 'Executed to Date', value: 'SAR 2.60M', note: '62% committed', color: '#12805c' },
+      { label: 'Remaining', value: 'SAR 1.60M', note: 'uncommitted', color: '#667085' },
+      { label: 'Penalties Applied', value: 'SAR 12,500', note: '1 SLA event', color: '#c0362c' },
+    ];
+    const trkTrackers = [
+      { title: 'Retention', sub: '10% held', barW: '0%', barColor: '#b45309', rows: [
+        { k: 'Held to date', v: 'SAR 260,400', w: 600, c: '#101828' },
+        { k: 'Released', v: 'SAR 0', w: 500, c: '#667085' },
+        { k: 'Remaining held', v: 'SAR 260,400', w: 500, c: '#b45309' },
+      ]},
+      { title: 'Advance Recovery', sub: '62% recovered', barW: '62%', barColor: '#2c7fb0', rows: [
+        { k: 'Advance paid', v: 'SAR 420,000', w: 600, c: '#101828' },
+        { k: 'Recovered', v: 'SAR 260,400', w: 500, c: '#12805c' },
+        { k: 'Outstanding', v: 'SAR 159,600', w: 500, c: '#2c7fb0' },
+      ]},
+      { title: 'Payable Status', sub: '89% paid', barW: '89%', barColor: '#12805c', rows: [
+        { k: 'Net certified', v: 'SAR 2,083,200', w: 600, c: '#101828' },
+        { k: 'Paid', v: 'SAR 1,850,000', w: 500, c: '#12805c' },
+        { k: 'Remaining', v: 'SAR 233,200', w: 500, c: '#b45309' },
+      ]},
+    ];
+    const ipcRows = [
+      { n: 'IPC 1', period: 'Q3 2025', done: '18%', gross: '756,000', ret: '75,600', adv: '113,400', net: '567,000', status: 'Paid', color: '#12805c', bg: '#e6f4ee' },
+      { n: 'IPC 2', period: 'Q4 2025', done: '34%', gross: '672,000', ret: '67,200', adv: '100,800', net: '504,000', status: 'Paid', color: '#12805c', bg: '#e6f4ee' },
+      { n: 'IPC 3', period: 'Q1 2026', done: '52%', gross: '756,000', ret: '75,600', adv: '46,200', net: '634,200', status: 'Paid', color: '#12805c', bg: '#e6f4ee' },
+      { n: 'IPC 4', period: 'Q2 2026', done: '62%', gross: '420,000', ret: '42,000', adv: '0', net: '233,200', status: 'Certifying', color: '#3a5bd9', bg: '#eef1fd' },
+    ];
+
+    // ---- MANPOWER RECON ----
+    const mpBase = [
+      { title: 'MEP Technician', reg: 1760, regRate: 35, ot: 96, otRate: 52.5, invoiced: 66640 },
+      { title: 'Security Guard', reg: 4224, regRate: 22, ot: 380, otRate: 33, invoiced: 105468 },
+      { title: 'Cleaner', reg: 3520, regRate: 18, ot: 210, otRate: 27, invoiced: 71400 },
+      { title: 'Multi-skill Helper', reg: 2640, regRate: 16, ot: 140, otRate: 24, invoiced: 45600 },
+      { title: 'Supervisor', reg: 704, regRate: 45, ot: 40, otRate: 67.5, invoiced: 34380 },
+    ];
+    let mpCT = 0, mpINV = 0;
+    const mpRows = mpBase.map(m => {
+      const contract = m.reg * m.regRate + m.ot * m.otRate;
+      const v = m.invoiced - contract;
+      mpCT += contract; mpINV += m.invoiced;
+      const ok = Math.abs(v) < 100;
+      return {
+        title: m.title, reg: fmt(m.reg), regRate: m.regRate.toFixed(0), ot: fmt(m.ot), otRate: m.otRate.toFixed(1),
+        contract: fmt(contract), invoiced: fmt(m.invoiced),
+        variance: (v > 0 ? '+' : v < 0 ? '−' : '') + fmt(Math.abs(v)),
+        varColor: ok ? '#667085' : '#c0362c',
+        status: ok ? 'Matched' : 'Review', color: ok ? '#12805c' : '#b45309', bg: ok ? '#e6f4ee' : '#fbf1e3',
+      };
+    });
+    const mpTotal = { contract: 'SAR ' + fmt(mpCT), invoiced: 'SAR ' + fmt(mpINV), variance: '+ SAR ' + fmt(mpINV - mpCT) };
+
+    // ---- PENALTY ----
+    const penFields = [
+      { label: 'Contract Number', value: 'SC-2024-0098', weight: 600, color: 'var(--accent,#3a5bd9)' },
+      { label: 'Project', value: 'Business Bay Offices', weight: 500, color: '#101828' },
+      { label: 'Reason', value: 'SLA breach — Cleaning Quality', weight: 500, color: '#101828' },
+      { label: 'Basis', value: '2% of monthly service charge', weight: 500, color: '#101828' },
+      { label: 'Penalty Amount', value: 'SAR 42,500', weight: 700, color: '#c0362c' },
+      { label: 'Raised On', value: '05 Feb 2026 by R. Menon (PM)', weight: 500, color: '#101828' },
+    ];
+    const penStepsRaw = [
+      { role: 'Raised by Project Manager', name: 'R. Menon', meta: 'Completed · 05 Feb 2026', state: 'done' },
+      { role: 'PM Acknowledge', name: 'R. Menon', meta: 'Attachment verified · 05 Feb 2026', state: 'done' },
+      { role: 'COO Approval', name: 'A. Khalil', meta: 'Approved · 07 Feb 2026', state: 'done' },
+      { role: 'Procurement Director', name: 'S. Farooq', meta: 'Awaiting review', state: 'current' },
+      { role: 'CFO Approval', name: 'M. Haddad', meta: 'Pending', state: 'pending' },
+      { role: 'Debit Supplier Account', name: 'Finance / AP', meta: 'Pending', state: 'pending' },
+    ];
+    const penSteps = penStepsRaw.map((st, i) => {
+      const last = i === penStepsRaw.length - 1;
+      if (st.state === 'done') return { ...st, icon: '✓', dotBg: '#12805c', dotBorder: '#12805c', tickColor: '#fff', lineColor: last ? 'transparent' : '#12805c', titleColor: '#101828', metaColor: '#12805c' };
+      if (st.state === 'current') return { ...st, icon: '', dotBg: 'color-mix(in srgb, var(--accent,#3a5bd9) 14%, #fff)', dotBorder: 'var(--accent,#3a5bd9)', tickColor: 'var(--accent,#3a5bd9)', lineColor: last ? 'transparent' : '#e6e8ec', titleColor: 'var(--accent,#3a5bd9)', metaColor: 'var(--accent,#3a5bd9)' };
+      return { ...st, icon: '', dotBg: '#fff', dotBorder: '#d5d9e0', tickColor: '#98a2b3', lineColor: last ? 'transparent' : '#e6e8ec', titleColor: '#98a2b3', metaColor: '#98a2b3' };
+    });
+
+    // ---- EVALUATION ----
+    const et = this.state.evalTab;
+    const evalTabsRaw = [
+      { id: 'jr', label: 'Construction / JR' }, { id: 'soft', label: 'Soft Services' }, { id: 'hard', label: 'Hard FM (MEP)' },
+    ];
+    const evalTabs = evalTabsRaw.map(t => ({
+      label: t.label, onClick: this.setTab(t.id),
+      style: {
+        border: 'none', borderRadius: '7px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+        background: t.id === et ? '#fff' : 'transparent', color: t.id === et ? 'var(--accent,#3a5bd9)' : '#667085',
+        boxShadow: t.id === et ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
+      },
+    }));
+
+    const datasets = {
+      jr: {
+        meta: [['Subcontractor', 'Al Faris Contracting'], ['Project', 'Dubai Hills Villas'], ['Period', 'Q1 2026'], ['Evaluator', 'PMO / QAQC']],
+        kpis: [
+          ['Schedule', 'Milestone / activity completion vs baseline', '≥95%', 'higher', 12, 0.91, '91%'],
+          ['Schedule', 'Weekly progress vs approved look-ahead', '≥90%', 'higher', 8, 0.86, '86%'],
+          ['Quality', 'Workmanship inspection pass rate', '≥95%', 'higher', 10, 0.93, '93%'],
+          ['Quality', 'Snag / punch list closure within SLA', '≥90%', 'higher', 10, 0.88, '88%'],
+          ['Quality', 'Rework rate (% of completed value)', '≤3%', 'lower', 8, 0.045, '4.5%'],
+          ['HSE', 'Lost Time Incidents (LTI)', '0', 'zero', 10, 0, '0'],
+          ['HSE', 'PTW / method statement / JSA compliance', '100%', 'higher', 7, 0.98, '98%'],
+          ['HSE', 'Housekeeping & site safety score', '≥95%', 'higher', 5, 0.90, '90%'],
+          ['Commercial', 'Progress billing submitted on time', '100%', 'higher', 5, 0.80, '80%'],
+          ['Commercial', 'VO substantiation turnaround', '≥90%', 'higher', 5, 0.85, '85%'],
+          ['Commercial', 'Unapproved cost overrun vs value', '≤2%', 'lower', 5, 0.015, '1.5%'],
+          ['Resources', 'Skilled manpower availability vs plan', '≥95%', 'higher', 5, 0.90, '90%'],
+          ['Resources', 'Supervisor / engineer attendance', '≥95%', 'higher', 3, 0.96, '96%'],
+          ['Materials', 'Submittal / sample lead-time compliance', '≥90%', 'higher', 3, 0.82, '82%'],
+          ['Documentation', 'As-built / handover dossier on time', '≥90%', 'higher', 4, 0.70, '70%'],
+        ],
+        adj: [['Penalty (%)', '−3%', '#c0362c'], ['Incentive (%)', '0%', '#667085'], ['Net Adjustment', '−3%', '#c0362c']],
+      },
+      soft: {
+        meta: [['Subcontractor', 'Berkeley Services'], ['Project', 'Business Bay Offices'], ['Period', 'Jan 2026'], ['Evaluator', 'FM Ops']],
+        kpis: [
+          ['Cleaning', 'Cleaning quality score', '≥90%', 'higher', 15, 0.84, '84%'],
+          ['Cleaning', 'Frequency compliance', '100%', 'higher', 10, 0.98, '98%'],
+          ['Cleaning', 'Complaint rate', '≤5%', 'lower', 10, 0.07, '7%'],
+          ['Security', 'Incident response time', '≥95%', 'higher', 10, 0.92, '92%'],
+          ['Security', 'Patrol compliance', '100%', 'higher', 10, 0.97, '97%'],
+          ['Security', 'Incident reporting accuracy', '≥95%', 'higher', 5, 0.94, '94%'],
+          ['HSE', 'Safety compliance', '100%', 'higher', 10, 0.99, '99%'],
+          ['HSE', 'Training attendance', '≥95%', 'higher', 5, 0.90, '90%'],
+          ['Customer', 'Customer satisfaction (CSAT)', '≥90%', 'higher', 10, 0.88, '88%'],
+          ['Customer', 'Complaint closure time', '≥95%', 'higher', 5, 0.93, '93%'],
+          ['Manpower', 'Staff attendance', '100%', 'higher', 5, 0.97, '97%'],
+          ['Manpower', 'Grooming & conduct', '≥95%', 'higher', 5, 0.92, '92%'],
+        ],
+        adj: [['Penalty (%)', '−5%', '#c0362c'], ['Incentive (%)', '0%', '#667085'], ['Net Adjustment', '−5%', '#c0362c']],
+      },
+      hard: {
+        meta: [['Subcontractor', 'ENGIE Cofely'], ['Project', 'Airport Terminal 2'], ['Period', 'Q4 2025'], ['Evaluator', 'Hard FM']],
+        kpis: [
+          ['Service Delivery', 'Response time compliance', '≥95%', 'higher', 12.5, 0.93, '93%'],
+          ['Service Delivery', 'Resolution time compliance', '≥90%', 'higher', 12.5, 0.89, '89%'],
+          ['Service Delivery', 'First-time fix rate', '≥85%', 'higher', 12.5, 0.87, '87%'],
+          ['Preventive Maint.', 'PM completion', '≥95%', 'higher', 12.5, 0.96, '96%'],
+          ['Preventive Maint.', 'PM quality score', '≥90%', 'higher', 6.25, 0.91, '91%'],
+          ['Asset Performance', 'MTTR compliance', 'Within SLA', 'higher', 6.25, 0.88, '88%'],
+          ['Quality', 'NCR closure', '≥95%', 'higher', 6.25, 0.92, '92%'],
+          ['HSE', 'Incident rate (LTI)', '0', 'zero', 6.25, 0, '0'],
+          ['HSE', 'PTW compliance', '100%', 'higher', 6.25, 0.98, '98%'],
+          ['Customer', 'CSAT', '≥90%', 'higher', 6.25, 0.90, '90%'],
+          ['Customer', 'Complaint closure', '≥95%', 'higher', 6.25, 0.94, '94%'],
+          ['Reporting', 'Timely reports', '100%', 'higher', 3.75, 0.95, '95%'],
+          ['Reporting', 'CMMS accuracy', '≥95%', 'higher', 2.5, 0.93, '93%'],
+        ],
+        adj: [['Penalty (%)', '−2%', '#c0362c'], ['Incentive (%)', '0%', '#667085'], ['Net Adjustment', '−2%', '#c0362c']],
+      },
+    };
+    const ds = datasets[et];
+    const targetNum = { '≥95%': 0.95, '≥90%': 0.90, '≥85%': 0.85, '100%': 1, '≤5%': 0.05, '≤3%': 0.03, '≤2%': 0.02, '0': 0, 'Within SLA': 0.9 };
+    let evalSum = 0; const catAgg = {}; let prevCat = null;
+    const evalRows = ds.kpis.map(k => {
+      const [cat, kpi, target, dir, weight, actual, actualStr] = k;
+      const sc = this.scoreKPI(actual, targetNum[target] ?? 1, dir);
+      const weighted = weight * sc / 100;
+      evalSum += weighted;
+      catAgg[cat] = (catAgg[cat] || 0) + weighted;
+      const scColor = sc >= 90 ? '#12805c' : sc >= 70 ? '#b45309' : '#c0362c';
+      const showCat = cat !== prevCat; prevCat = cat;
+      return {
+        cat: showCat ? cat : '', catColor: '#101828', catWeight: showCat ? 600 : 400,
+        kpi, target, weight: weight, actual: actualStr, score: Math.round(sc) + '%', scoreColor: scColor,
+        weighted: weighted.toFixed(2),
+      };
+    });
+    const evalTotal = Math.round(evalSum * 10) / 10;
+    const evalRating = this.rating(evalTotal);
+    const catColors = ['#3a5bd9', '#12a679', '#7a5bd9', '#2c7fb0', '#b45309', '#c0362c', '#0f766e'];
+    const evalCats = Object.keys(catAgg).map((c, i) => ({
+      label: c, val: catAgg[c].toFixed(1), width: Math.min(100, catAgg[c] / (ds.kpis.filter(k => k[0] === c).reduce((a, k) => a + k[4], 0)) * 100) + '%',
+      color: catColors[i % catColors.length],
+    }));
+    const evalMeta = ds.meta.map(m => ({ k: m[0], v: m[1] }));
+    const evalAdj = ds.adj.map(a => ({ k: a[0], v: a[1], c: a[2], w: a[0].indexOf('Net') === 0 ? 700 : 500 }));
+    const ratingGuide = [
+      { range: '≥ 90', label: 'Excellent', color: '#12805c' },
+      { range: '80–89.9', label: 'Good', color: '#177245' },
+      { range: '70–79.9', label: 'Acceptable', color: '#b45309' },
+      { range: '60–69.9', label: 'Poor', color: '#b54708' },
+      { range: '< 60', label: 'Unsatisfactory', color: '#c0362c' },
+    ];
+
+    return {
+      screen: s,
+      pageTitle: (titles[s] || ['', ''])[0], pageSubtitle: (titles[s] || ['', ''])[1],
+      headerFields, termFields, lineItems, summaryRows, slaTags,
+      trk, trkFinance, trkTrackers, ipcRows,
+      mpRows, mpTotal, penFields, penSteps,
+      evalTabs, evalMeta, evalRows, evalTotal, evalRating, evalCats, evalAdj, ratingGuide,
+      coRows, coValueRows, coSteps, coHistory,
+      isDashboard: s === 'dashboard', isContracts: s === 'contracts', isCreate: s === 'create',
+      isTracking: s === 'tracking', isManpower: s === 'manpower', isPenalty: s === 'penalty', isEvaluation: s === 'evaluation',
+      isChangeOrder: s === 'changeorder',
+      goCreate: this.nav('create'),
+      navItems, kpis, alerts, serviceMix, approvals,
+      contracts, contractFilters, contractCount: rawContracts.length,
+    };
+  }
+}
+</script>
+</body>
+</html>
