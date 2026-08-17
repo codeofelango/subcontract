@@ -12,6 +12,7 @@ import logging
 from dataclasses import dataclass
 
 import httpx
+from azure.core.exceptions import ResourceNotFoundError
 
 from app.config import settings
 from app.models import Attachment
@@ -136,8 +137,8 @@ def _build_inline_attachments(attachments: list[EmailAttachment]) -> list[dict] 
     for a in attachments:
         try:
             content = read_bytes(a.storage_path)
-        except OSError:
-            logger.exception("Attachment file missing on disk, skipping from email: %s", a.storage_path)
+        except ResourceNotFoundError:
+            logger.exception("Attachment blob missing, skipping from email: %s", a.storage_path)
             continue
         graph_attachments.append({
             "@odata.type": "#microsoft.graph.fileAttachment",

@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str
+    azure_storage_connection_string: str
+    azure_storage_container: str = "subcontract-attachments"
     backend_host: str = "0.0.0.0"
     backend_port: int = 8010
     cors_origins: str = "http://localhost:3001"
