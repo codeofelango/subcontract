@@ -26,6 +26,7 @@ import type {
   PenaltyDetailResponse,
   PendingActionItem,
   ProjectOption,
+  QuickLoginOptionsResponse,
   TrackingResponse,
   VendorSubmission,
   WorkflowAppliesTo,
@@ -257,10 +258,15 @@ export interface UserInput {
   title: string;
   active: boolean;
   role: AccessRole;
+  isQuickLogin: boolean;
 }
 
 export function getUsers(): Promise<AppUser[]> {
   return apiFetch<AppUser[]>("/users");
+}
+
+export function getQuickLoginOptions(): Promise<QuickLoginOptionsResponse> {
+  return apiFetch<QuickLoginOptionsResponse>("/auth/quick-login/options");
 }
 
 export function createUser(payload: UserInput): Promise<AppUser> {

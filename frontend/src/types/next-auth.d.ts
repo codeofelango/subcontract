@@ -8,6 +8,11 @@ declare module "next-auth" {
       role?: string | null;
     };
   }
+
+  interface User {
+    role?: string | null;
+    accessToken?: string;
+  }
 }
 
 declare module "next-auth/jwt" {

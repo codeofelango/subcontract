@@ -703,6 +703,20 @@ export interface AppUser {
   title: string;
   active: boolean;
   role: AccessRole;
+  isQuickLogin: boolean;
+}
+
+export type QuickLoginSlot = "admin" | "requester" | "approver";
+
+export interface QuickLoginOption {
+  slot: QuickLoginSlot;
+  label: string;
+  user: AppUser | null;
+}
+
+export interface QuickLoginOptionsResponse {
+  enabled: boolean;
+  options: QuickLoginOption[];
 }
 
 export type WorkflowAppliesTo = "contract_scope" | "contract_manpower" | "change_order" | "penalty";

@@ -20,7 +20,7 @@ const ROLES: Array<{ value: UserInput["role"]; label: string }> = [
   { value: "approver", label: "Approver" },
 ];
 
-const emptyDraft: UserInput = { name: "", email: "", department: DEPARTMENTS[0], title: "", active: true, role: null };
+const emptyDraft: UserInput = { name: "", email: "", department: DEPARTMENTS[0], title: "", active: true, role: null, isQuickLogin: false };
 
 export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
   const [users, setUsers] = useState(initialUsers);
@@ -47,7 +47,7 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
 
   function startEdit(u: AppUser) {
     setEditingId(u.id);
-    setEditDraft({ name: u.name, email: u.email, department: u.department, title: u.title, active: u.active, role: u.role });
+    setEditDraft({ name: u.name, email: u.email, department: u.department, title: u.title, active: u.active, role: u.role, isQuickLogin: u.isQuickLogin });
   }
 
   async function submitEdit(id: number) {
@@ -80,6 +80,7 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
             <th className="px-[16px] py-[10px] font-semibold">Department</th>
             <th className="px-[16px] py-[10px] font-semibold">Title</th>
             <th className="px-[16px] py-[10px] font-semibold">Access Role</th>
+            <th className="px-[16px] py-[10px] font-semibold">Quick Login</th>
             <th className="px-[16px] py-[10px] font-semibold">Status</th>
             <th className="px-[16px] py-[10px] font-semibold w-[80px]" />
           </tr>
@@ -119,6 +120,15 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
                     ))}
                   </select>
                 </td>
+                <td className="px-[16px] py-[8px] text-center">
+                  <input
+                    type="checkbox"
+                    disabled={!editDraft.role}
+                    checked={editDraft.isQuickLogin}
+                    onChange={(e) => setEditDraft((d) => ({ ...d, isQuickLogin: e.target.checked }))}
+                    title={editDraft.role ? "Use this account for the matching quick-login button" : "Assign an access role first"}
+                  />
+                </td>
                 <td className="px-[16px] py-[8px]">
                   <select
                     className={inputCls}
@@ -153,6 +163,15 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
                     </Pill>
                   ) : (
                     <span className="text-[#98a2b3]">No access</span>
+                  )}
+                </td>
+                <td className="px-[16px] py-[11px] text-center">
+                  {u.isQuickLogin ? (
+                    <Pill color="#7a5bd9" bg="#f0ecfb">
+                      Quick login
+                    </Pill>
+                  ) : (
+                    <span className="text-[#98a2b3]">—</span>
                   )}
                 </td>
                 <td className="px-[16px] py-[11px]">
@@ -210,6 +229,15 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
                   </option>
                 ))}
               </select>
+            </td>
+            <td className="px-[16px] py-[8px] text-center">
+              <input
+                type="checkbox"
+                disabled={!newDraft.role}
+                checked={newDraft.isQuickLogin}
+                onChange={(e) => setNewDraft((d) => ({ ...d, isQuickLogin: e.target.checked }))}
+                title={newDraft.role ? "Use this account for the matching quick-login button" : "Assign an access role first"}
+              />
             </td>
             <td className="px-[16px] py-[8px] text-[#98a2b3] text-[11.5px]">Active</td>
             <td className="px-[16px] py-[8px]">
