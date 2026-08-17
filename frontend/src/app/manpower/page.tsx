@@ -60,6 +60,8 @@ export default async function ManpowerPage() {
           <thead>
             <tr className="text-[#667085] text-[10px] uppercase tracking-[.03em] bg-[#fafbfc]">
               <th className="px-[14px] py-[10px] font-semibold text-left">Job Title</th>
+              <th className="px-[10px] py-[10px] font-semibold text-left border-l border-[#e6e8ec]">Nationality</th>
+              <th className="px-[10px] py-[10px] font-semibold text-right">Employees</th>
               <th className="px-[10px] py-[10px] font-semibold text-right border-l border-[#e6e8ec]">Reg Hrs</th>
               <th className="px-[10px] py-[10px] font-semibold text-right">Rate</th>
               <th className="px-[10px] py-[10px] font-semibold text-right">OT Hrs</th>
@@ -72,8 +74,10 @@ export default async function ManpowerPage() {
           </thead>
           <tbody>
             {rows.map((m) => (
-              <tr key={m.title} className="border-t border-[#f0f1f4]">
+              <tr key={`${m.title}-${m.nationality}`} className="border-t border-[#f0f1f4]">
                 <td className="px-[14px] py-[11px] font-semibold">{m.title}</td>
+                <td className="px-[10px] py-[11px] border-l border-[#f0f1f4] text-[#475467]">{m.nationality}</td>
+                <td className="px-[10px] py-[11px] text-right font-mono">{m.employeeCount}</td>
                 <td className="px-[10px] py-[11px] text-right font-mono">{m.reg}</td>
                 <td className="px-[10px] py-[11px] text-right font-mono text-[#667085]">{m.regRate}</td>
                 <td className="px-[10px] py-[11px] text-right font-mono">{m.ot}</td>
@@ -92,6 +96,8 @@ export default async function ManpowerPage() {
             ))}
             <tr className="border-t-2 border-[#e6e8ec] bg-[#fafbfc] font-bold">
               <td className="px-[14px] py-[12px]">Total</td>
+              <td className="border-l border-[#e6e8ec]" />
+              <td className="px-[10px] py-[12px] text-right font-mono">{total.employeeCount}</td>
               <td colSpan={4} />
               <td className="px-[12px] py-[12px] text-right font-mono bg-[#f2f6fc]">{total.contract}</td>
               <td className="px-[12px] py-[12px] text-right font-mono border-l border-[#e6e8ec]">{total.invoiced}</td>

@@ -21,6 +21,7 @@ from app.models import (
     ContractLineItem,
     Evaluation,
     EvaluationKpiRow,
+    GrnLine,
     Ipc,
     ManpowerContractDetail,
     ManpowerPositionLine,
@@ -34,6 +35,8 @@ from app.models import (
     TimesheetLine,
     VendorInvoiceLine,
     VendorPortalSubmission,
+    WorkflowStepTemplate,
+    WorkflowTemplate,
 )
 
 D = Decimal
@@ -44,7 +47,8 @@ CONTRACTS = [
          service_type="Hard FM (MEP)", project_name="Marina Gate Towers", project_no="PRJ-0219", duration_months=24,
          contract_value=D("4200000"), contract_budget=D("4350000"), advance_amount=D("420000"),
          source_pr="PR-0123 / PR-0124", oracle_po="PO-ORA-448120", oracle_po_rev="Rev 1", status="Active",
-         progress_pct=62, expiry_date=datetime.date(2027, 3, 31), remaining_months=14),
+         progress_pct=62, expiry_date=datetime.date(2027, 3, 31), remaining_months=14,
+         location="Dubai", vat_pct=D("15.00"), advance2_pct=D("5.00"), advance2_amount=D("210000")),
     dict(id="SC-2024-0155", vendor_name="Transguard Group", contractor_no="V-100511", contract_type="manpower",
          service_type="Manpower", project_name="Facilities — multi-site", project_no="PRJ-0301", duration_months=36,
          contract_value=D("6800000"), contract_budget=D("6800000"), advance_amount=D("0"), retention_pct=D("0"),
@@ -106,14 +110,35 @@ SERVICE_TYPE_OPTIONS = [
 
 # People already named in today's hardcoded penalty/CO approval templates, plus a few more —
 # lets a first Approval Flow be built in the UI against a realistic directory immediately.
+# `role` is the fixed SSO access role (admin|procurement_requester|hr_requester|approver|None) -
+# separate from `title`, which is just the approval-chain display label.
 APP_USERS = [
-    dict(name="R. Menon", email="r.menon@mafas.com", department="PMO", title="Project Manager", active=True),
-    dict(name="K. Ibrahim", email="k.ibrahim@mafas.com", department="Procurement", title="QS / Cost Verification", active=True),
-    dict(name="S. Farooq", email="s.farooq@mafas.com", department="Procurement", title="Procurement Director", active=True),
-    dict(name="A. Khalil", email="a.khalil@mafas.com", department="Executive", title="COO", active=True),
-    dict(name="M. Haddad", email="m.haddad@mafas.com", department="Finance", title="CFO", active=True),
-    dict(name="Finance / AP", email="ap@mafas.com", department="Finance", title="Accounts Payable", active=True),
-    dict(name="H. Al-Sayed", email="h.alsayed@mafas.com", department="HR", title="HR Lead", active=True),
+    dict(name="R. Menon", email="r.menon@mafas.com", department="PMO", title="Project Manager", active=True, role="approver", is_quick_login=True),
+    dict(name="K. Ibrahim", email="k.ibrahim@mafas.com", department="Procurement", title="QS / Cost Verification", active=True, role="procurement_requester", is_quick_login=True),
+    dict(name="S. Farooq", email="s.farooq@mafas.com", department="Procurement", title="Procurement Director", active=True, role="approver"),
+    dict(name="A. Khalil", email="a.khalil@mafas.com", department="Executive", title="COO", active=True, role="approver"),
+    dict(name="M. Haddad", email="m.haddad@mafas.com", department="Finance", title="CFO", active=True, role="approver"),
+    dict(name="Finance / AP", email="ap@mafas.com", department="Finance", title="Accounts Payable", active=True, role="approver"),
+    dict(name="H. Al-Sayed", email="h.alsayed@mafas.com", department="HR", title="HR Lead", active=True, role="hr_requester"),
+]
+
+# One person, two directory rows sharing the same email — a single account can be assigned as
+# the named approver on two different steps of a chain (see CONTRACT_APPROVAL_FLOWS below).
+# Only ONE of the two rows carries a login `role` (the CFO row, as Admin) - login resolves to
+# the first active row for that email with a non-null role, so the Procurement Director row
+# deliberately stays role=None to avoid ambiguity (see AppUser docstring in models/tables.py).
+ELANGO_PROCUREMENT_DIRECTOR = dict(
+    name="Elango Shunmugaraj", email="elango@mafas.com", department="Procurement", title="Procurement Director", active=True, role=None
+)
+ELANGO_CFO = dict(name="Elango Shunmugaraj", email="elango@mafas.com", department="Finance", title="CFO", active=True, role="admin", is_quick_login=True)
+
+# Sample dynamic approval flows, one per contract-creation route (Scope/Works vs Manpower Supply -
+# see app/routers/workflows.py APPLIES_TO_VALUES). Activated immediately so every contract submitted
+# after seeding is routed through this chain via seed_approval_steps(); admins can still add/remove/
+# reassign steps at any time from /approval-flows since the chain is re-read fresh on each submission.
+CONTRACT_APPROVAL_FLOWS = [
+    dict(name="Scope/Works Contract — Procurement & Finance Sign-off", applies_to="contract_scope"),
+    dict(name="Manpower Supply Contract — Procurement & Finance Sign-off", applies_to="contract_manpower"),
 ]
 
 SC_0142_LINE_ITEMS = [
@@ -196,12 +221,34 @@ PAYMENT_TERM_OPTIONS = [
 ]
 
 SC_0142_IPCS = [
-    dict(number="IPC 1", period="Q3 2025", work_done_pct=D("18"), gross=D("756000"), retention=D("75600"), advance_recovered=D("113400"), net_payable=D("567000"), status="Paid"),
-    dict(number="IPC 2", period="Q4 2025", work_done_pct=D("34"), gross=D("672000"), retention=D("67200"), advance_recovered=D("100800"), net_payable=D("504000"), status="Paid"),
-    dict(number="IPC 3", period="Q1 2026", work_done_pct=D("52"), gross=D("756000"), retention=D("75600"), advance_recovered=D("46200"), net_payable=D("634200"), status="Paid"),
+    dict(number="IPC 1", period="Q3 2025", work_done_pct=D("18"), gross=D("756000"), retention=D("75600"), advance_recovered=D("113400"), net_payable=D("567000"), status="Paid",
+         invoice_number="INV-0142-01", period_from=datetime.date(2025, 7, 1), period_to=datetime.date(2025, 9, 30), equipment_rental_deduction=D("0"),
+         oracle_push_status="Pushed", oracle_confirmation_code="ORA-CONF-100201"),
+    dict(number="IPC 2", period="Q4 2025", work_done_pct=D("34"), gross=D("672000"), retention=D("67200"), advance_recovered=D("100800"), net_payable=D("504000"), status="Paid",
+         invoice_number="INV-0142-02", period_from=datetime.date(2025, 10, 1), period_to=datetime.date(2025, 12, 31), equipment_rental_deduction=D("0"),
+         oracle_push_status="Pushed", oracle_confirmation_code="ORA-CONF-100202"),
+    dict(number="IPC 3", period="Q1 2026", work_done_pct=D("52"), gross=D("756000"), retention=D("75600"), advance_recovered=D("46200"), net_payable=D("634200"), status="Paid",
+         invoice_number="INV-0142-03", period_from=datetime.date(2026, 1, 1), period_to=datetime.date(2026, 3, 31), equipment_rental_deduction=D("8500"),
+         oracle_push_status="Pushed", oracle_confirmation_code="ORA-CONF-100203"),
     # IPC 4's advance recovery is capped: only SAR 159,600 of the 10% advance remains outstanding at this point.
-    dict(number="IPC 4", period="Q2 2026", work_done_pct=D("62"), gross=D("420000"), retention=D("42000"), advance_recovered=D("0"), net_payable=D("378000"), status="Certifying"),
+    # Still Certifying and not yet pushed to Oracle - demonstrates the pending state on the tracking page.
+    dict(number="IPC 4", period="Q2 2026", work_done_pct=D("62"), gross=D("420000"), retention=D("42000"), advance_recovered=D("0"), net_payable=D("378000"), status="Certifying",
+         invoice_number="INV-0142-04", period_from=datetime.date(2026, 4, 1), period_to=datetime.date(2026, 6, 30), equipment_rental_deduction=D("0")),
 ]
+
+# Simulated Oracle GRN (Goods Receipt Note) feed - one delivery/service-completion event per BOQ
+# line per IPC period, logged independently of the vendor's self-declared work-done % above. Four
+# of five lines track the claimed progress closely (small realistic rounding noise); MEP-03 (Plumbing
+# & drainage) is deliberately under-delivered, growing into a visible variance by IPC 4 - demonstrates
+# the GRN Invoice report's ability to flag claimed-vs-actually-received discrepancies.
+SC_0142_GRN_QTY_BY_CODE = {
+    "MEP-01": [D("2.5917"), D("2.3050"), D("2.5896"), D("1.4407")],
+    "MEP-02": [D("2.5917"), D("2.3050"), D("2.5896"), D("1.4407")],
+    "MEP-03": [D("2.5917"), D("2.10"), D("1.90"), D("1.00")],  # under-delivered from IPC 2 onward
+    "MEP-04": [D("2.5917"), D("2.3050"), D("2.5896"), D("1.4407")],
+    "MEP-05": [D("2.5917"), D("2.3050"), D("2.5896"), D("1.4407")],
+}
+SC_0142_GRN_PERIOD_DATES = [datetime.date(2025, 9, 30), datetime.date(2025, 12, 31), datetime.date(2026, 3, 31), datetime.date(2026, 6, 30)]
 
 # Vendor's next progress claim via the Oracle vendor portal - not yet certified into an IPC.
 SC_0142_VENDOR_SUBMISSIONS = [
@@ -209,11 +256,11 @@ SC_0142_VENDOR_SUBMISSIONS = [
 ]
 
 MP_BASE = [
-    dict(job_title="MEP Technician", reg_hours=D("1760"), reg_rate=D("35"), ot_hours=D("96"), ot_rate=D("52.5"), invoiced=D("66640")),
-    dict(job_title="Security Guard", reg_hours=D("4224"), reg_rate=D("22"), ot_hours=D("380"), ot_rate=D("33"), invoiced=D("105468")),
-    dict(job_title="Cleaner", reg_hours=D("3520"), reg_rate=D("18"), ot_hours=D("210"), ot_rate=D("27"), invoiced=D("71400")),
-    dict(job_title="Multi-skill Helper", reg_hours=D("2640"), reg_rate=D("16"), ot_hours=D("140"), ot_rate=D("24"), invoiced=D("45600")),
-    dict(job_title="Supervisor", reg_hours=D("704"), reg_rate=D("45"), ot_hours=D("40"), ot_rate=D("67.5"), invoiced=D("34380")),
+    dict(job_title="MEP Technician", nationality="Indian", employee_count=10, reg_hours=D("1760"), reg_rate=D("35"), ot_hours=D("96"), ot_rate=D("52.5"), invoiced=D("66640")),
+    dict(job_title="Security Guard", nationality="Nepalese", employee_count=24, reg_hours=D("4224"), reg_rate=D("22"), ot_hours=D("380"), ot_rate=D("33"), invoiced=D("105468")),
+    dict(job_title="Cleaner", nationality="Bangladeshi", employee_count=20, reg_hours=D("3520"), reg_rate=D("18"), ot_hours=D("210"), ot_rate=D("27"), invoiced=D("71400")),
+    dict(job_title="Multi-skill Helper", nationality="Pakistani", employee_count=15, reg_hours=D("2640"), reg_rate=D("16"), ot_hours=D("140"), ot_rate=D("24"), invoiced=D("45600")),
+    dict(job_title="Supervisor", nationality="Filipino", employee_count=4, reg_hours=D("704"), reg_rate=D("45"), ot_hours=D("40"), ot_rate=D("67.5"), invoiced=D("34380")),
 ]
 MP_PERIOD = "February 2026"
 
@@ -327,10 +374,23 @@ async def seed() -> None:
         session.add(Contract(**MANPOWER_CONTRACT))
         await session.flush()
 
+        sc_0142_lines_by_code: dict[str, ContractLineItem] = {}
         for li in SC_0142_LINE_ITEMS:
-            session.add(ContractLineItem(contract_id="SC-2024-0142", **li))
+            line_item = ContractLineItem(contract_id="SC-2024-0142", **li)
+            session.add(line_item)
+            sc_0142_lines_by_code[li["code"]] = line_item
+        await session.flush()  # assigns line_item.id, needed for the GRN rows below
+
         for ipc in SC_0142_IPCS:
             session.add(Ipc(contract_id="SC-2024-0142", **ipc))
+
+        for code, qtys_by_period in SC_0142_GRN_QTY_BY_CODE.items():
+            line_item = sc_0142_lines_by_code[code]
+            for period_idx, qty in enumerate(qtys_by_period):
+                session.add(GrnLine(
+                    contract_id="SC-2024-0142", line_item_id=line_item.id, grn_number=f"GRN-0142-{code}-{period_idx + 1}",
+                    qty_received=qty, received_date=SC_0142_GRN_PERIOD_DATES[period_idx],
+                ))
         for sub in SC_0142_VENDOR_SUBMISSIONS:
             session.add(VendorPortalSubmission(contract_id="SC-2024-0142", **sub))
 
@@ -354,6 +414,28 @@ async def seed() -> None:
             session.add(ServiceTypeOption(**opt))
         for u in APP_USERS:
             session.add(AppUser(**u))
+        elango_pd = AppUser(**ELANGO_PROCUREMENT_DIRECTOR)
+        elango_cfo = AppUser(**ELANGO_CFO)
+        session.add(elango_pd)
+        session.add(elango_cfo)
+        await session.flush()  # assign ids so the workflow steps below can reference them
+
+        for flow in CONTRACT_APPROVAL_FLOWS:
+            nodes = [
+                {"id": "n1", "type": "step", "position": {"x": 60, "y": 120}, "data": {"label": "Raised", "userId": None}},
+                {"id": "n2", "type": "step", "position": {"x": 300, "y": 120}, "data": {"label": "Procurement Director Approval", "userId": elango_pd.id}},
+                {"id": "n3", "type": "step", "position": {"x": 540, "y": 120}, "data": {"label": "CFO Approval", "userId": elango_cfo.id}},
+            ]
+            edges = [
+                {"id": "e-n1-n2", "source": "n1", "target": "n2"},
+                {"id": "e-n2-n3", "source": "n2", "target": "n3"},
+            ]
+            template = WorkflowTemplate(name=flow["name"], applies_to=flow["applies_to"], is_active=True, canvas_nodes=nodes, canvas_edges=edges)
+            session.add(template)
+            await session.flush()
+            session.add(WorkflowStepTemplate(template_id=template.id, seq=0, role="Raised", user_id=None))
+            session.add(WorkflowStepTemplate(template_id=template.id, seq=1, role="Procurement Director Approval", user_id=elango_pd.id))
+            session.add(WorkflowStepTemplate(template_id=template.id, seq=2, role="CFO Approval", user_id=elango_cfo.id))
 
         for c in ORACLE_CONTRACTORS:
             session.add(OracleContractor(**c))
@@ -363,10 +445,12 @@ async def seed() -> None:
         for row in MP_BASE:
             session.add(TimesheetLine(
                 contract_id="SC-2024-0155", period=MP_PERIOD, job_title=row["job_title"],
+                nationality=row["nationality"], employee_count=row["employee_count"],
                 reg_hours=row["reg_hours"], reg_rate=row["reg_rate"], ot_hours=row["ot_hours"], ot_rate=row["ot_rate"],
             ))
             session.add(VendorInvoiceLine(
-                contract_id="SC-2024-0155", period=MP_PERIOD, job_title=row["job_title"], invoiced_amount=row["invoiced"],
+                contract_id="SC-2024-0155", period=MP_PERIOD, job_title=row["job_title"],
+                nationality=row["nationality"], invoiced_amount=row["invoiced"],
             ))
 
         for co in CHANGE_ORDERS:

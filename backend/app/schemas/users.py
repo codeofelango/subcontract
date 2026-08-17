@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+Role = str | None  # 'admin' | 'procurement_requester' | 'hr_requester' | 'approver' | None
+
 
 class UserOut(BaseModel):
     id: int
@@ -8,6 +10,8 @@ class UserOut(BaseModel):
     department: str
     title: str
     active: bool
+    role: Role
+    isQuickLogin: bool
 
 
 class UserIn(BaseModel):
@@ -16,3 +20,5 @@ class UserIn(BaseModel):
     department: str
     title: str
     active: bool = True
+    role: Role = None
+    isQuickLogin: bool = False

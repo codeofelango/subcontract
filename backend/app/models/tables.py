@@ -31,11 +31,24 @@ class Contract(Base):
     oracle_po: Mapped[str | None] = mapped_column(String(30), nullable=True)
     oracle_po_rev: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
-    status: Mapped[str] = mapped_column(String(20), default="Pending")  # Draft|Pending|Active|Expiring|Closing
+    location: Mapped[str | None] = mapped_column(String(80), nullable=True)  # site location shown on the invoice header
+    ref_note: Mapped[str | None] = mapped_column(String(60), nullable=True)  # generic "Ref" field on the invoice header
+    erp_ref: Mapped[str | None] = mapped_column(String(60), nullable=True)  # "ERP Ref" field on the invoice header
+    vat_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("15.00"))
+    # Second advance/down-payment tranche, tracked independently of advance_pct/advance_amount (tranche 1) -
+    # mirrors the same pro-rata-to-progress recovery mechanism, just against a separate pool.
+    advance2_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    advance2_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
+    # Letter of credit deduction - same mechanism again, defaults to 0/not applicable when unused.
+    lc_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0"))
+    lc_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
+
+    status: Mapped[str] = mapped_column(String(20), default="Pending")  # Draft|Pending|Active|Expiring|Closing|Rejected
     progress_pct: Mapped[int] = mapped_column(default=0)
     expiry_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
     remaining_months: Mapped[int] = mapped_column(default=0)
 
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("app_users.id"), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     line_items: Mapped[list["ContractLineItem"]] = relationship(back_populates="contract", cascade="all, delete-orphan")
@@ -62,8 +75,29 @@ class ContractLineItem(Base):
     sla_tags: Mapped[str] = mapped_column(String(200), default="")  # "|"-joined SLA tag labels for this line
     previous_qty: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)  # qty before the last approved change order
     revised_by_co: Mapped[str | None] = mapped_column(String(20), nullable=True)  # change order id that last revised this line's qty
+    section: Mapped[str | None] = mapped_column(String(120), nullable=True)  # optional BOQ section/group header, e.g. "Runway Structural Pavement"
 
     contract: Mapped["Contract"] = relationship(back_populates="line_items")
+    grn_receipts: Mapped[list["GrnLine"]] = relationship(back_populates="line_item", cascade="all, delete-orphan")
+
+
+class GrnLine(Base):
+    """A single Goods Receipt Note (GRN) event against one BOQ line - simulates the Oracle GRN
+    feed confirming physical/service quantity actually received against the PO, independent of
+    the vendor's self-declared work-done %. Used to compute a receipt-verified completion basis
+    for the GRN Invoice report, and to flag variance against the vendor's claimed progress.
+    """
+
+    __tablename__ = "grn_lines"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    contract_id: Mapped[str] = mapped_column(ForeignKey("contracts.id"))
+    line_item_id: Mapped[int] = mapped_column(ForeignKey("contract_line_items.id"))
+    grn_number: Mapped[str] = mapped_column(String(30))
+    qty_received: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    received_date: Mapped[datetime.date] = mapped_column(Date)
+
+    line_item: Mapped["ContractLineItem"] = relationship(back_populates="grn_receipts")
 
 
 class OraclePr(Base):
@@ -214,6 +248,18 @@ class Ipc(Base):
     status: Mapped[str] = mapped_column(String(20), default="Certifying")  # Certifying | Paid
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    invoice_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    period_from: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+    period_to: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
+    # Discretionary charge entered at certification time - not derivable from any rate, unlike retention/advance.
+    equipment_rental_deduction: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0"))
+    # Whether this PM-approved invoice has been pushed to Oracle (AP invoice creation) yet, and
+    # the confirmation code Oracle's API returns once it has - real integration not wired up, so
+    # certify_vendor_submission() simulates the push the same way PO creation is simulated on
+    # contract approval, immediately at PM-approval time.
+    oracle_push_status: Mapped[str] = mapped_column(String(20), default="Not Pushed")  # "Not Pushed" | "Pushed"
+    oracle_confirmation_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
     contract: Mapped["Contract"] = relationship(back_populates="ipcs")
 
 
@@ -235,6 +281,9 @@ class VendorPortalSubmission(Base):
     submitted_by: Mapped[str] = mapped_column(String(80))
     submitted_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     status: Mapped[str] = mapped_column(String(20), default="Submitted")  # Submitted | Certified
+    # Set at certify time to the GRN it was approved into - lets the Invoice Submission list show
+    # the Oracle push confirmation without re-deriving it.
+    ipc_id: Mapped[int | None] = mapped_column(ForeignKey("ipcs.id"), nullable=True)
 
 
 class TimesheetLine(Base):
@@ -246,6 +295,8 @@ class TimesheetLine(Base):
     contract_id: Mapped[str] = mapped_column(ForeignKey("contracts.id"))
     period: Mapped[str] = mapped_column(String(20))
     job_title: Mapped[str] = mapped_column(String(60))
+    nationality: Mapped[str] = mapped_column(String(40), default="")
+    employee_count: Mapped[int] = mapped_column(default=1)
     reg_hours: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     reg_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     ot_hours: Mapped[Decimal] = mapped_column(Numeric(10, 2))
@@ -253,7 +304,7 @@ class TimesheetLine(Base):
 
 
 class VendorInvoiceLine(Base):
-    """Simulated vendor invoice submitted for the same period/job title."""
+    """Simulated vendor invoice submitted for the same period/job title/nationality group."""
 
     __tablename__ = "vendor_invoice_lines"
 
@@ -261,6 +312,7 @@ class VendorInvoiceLine(Base):
     contract_id: Mapped[str] = mapped_column(ForeignKey("contracts.id"))
     period: Mapped[str] = mapped_column(String(20))
     job_title: Mapped[str] = mapped_column(String(60))
+    nationality: Mapped[str] = mapped_column(String(40), default="")
     invoiced_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
 
 
@@ -271,8 +323,9 @@ class ChangeOrder(Base):
     contract_id: Mapped[str] = mapped_column(ForeignKey("contracts.id"))
     title: Mapped[str] = mapped_column(String(200))
     reason: Mapped[str] = mapped_column(String(200))
-    status: Mapped[str] = mapped_column(String(20), default="In Approval")  # Draft|In Approval|Approved
+    status: Mapped[str] = mapped_column(String(20), default="In Approval")  # Draft|In Approval|Approved|Rejected
     po_revision_label: Mapped[str] = mapped_column(String(30), default="Rev pending")
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("app_users.id"), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     lines: Mapped[list["ChangeOrderLine"]] = relationship(back_populates="change_order", cascade="all, delete-orphan")
@@ -302,7 +355,7 @@ class Penalty(Base):
     reason: Mapped[str] = mapped_column(String(200))
     basis: Mapped[str] = mapped_column(String(120))
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
-    status: Mapped[str] = mapped_column(String(20), default="In Approval")  # In Approval|Approved|Debited
+    status: Mapped[str] = mapped_column(String(20), default="In Approval")  # In Approval|Approved|Debited|Rejected
     attachment_ref: Mapped[str] = mapped_column(String(200))
     raised_by: Mapped[str] = mapped_column(String(80))
     raised_on: Mapped[datetime.date] = mapped_column(Date)
@@ -313,18 +366,43 @@ class Penalty(Base):
 
 
 class ApprovalStep(Base):
-    """Generic sequential approval step, shared by penalties and change orders."""
+    """Generic sequential approval step, shared by contracts, penalties, and change orders."""
 
     __tablename__ = "approval_steps"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    owner_type: Mapped[str] = mapped_column(String(20))  # 'penalty' | 'change_order'
+    owner_type: Mapped[str] = mapped_column(String(20))  # 'contract' | 'penalty' | 'change_order'
     owner_id: Mapped[str] = mapped_column(String(20))
     seq: Mapped[int] = mapped_column()
     role: Mapped[str] = mapped_column(String(80))
     approver_name: Mapped[str] = mapped_column(String(80))
-    state: Mapped[str] = mapped_column(String(20), default="pending")  # done|current|pending
+    # Linked AppUser for the named approver, when one was assigned via the WorkflowStepTemplate
+    # builder - lets /decide and /revise check "is this really your turn" instead of trusting
+    # the free-text approver_name. Null for legacy hardcoded fallback chains.
+    approver_user_id: Mapped[int | None] = mapped_column(ForeignKey("app_users.id", ondelete="SET NULL"), nullable=True)
+    state: Mapped[str] = mapped_column(String(20), default="pending")  # done|current|pending|rejected|skipped
+    decision: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 'approved' | 'rejected'
+    acted_by_id: Mapped[int | None] = mapped_column(ForeignKey("app_users.id"), nullable=True)
+    acted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     meta_note: Mapped[str] = mapped_column(String(120), default="")
+
+
+class ApprovalStepHistory(Base):
+    """Append-only audit log of decision revisions on an ApprovalStep - written every time an
+    approver changes an Approve/Reject decision they already made (see /revise endpoints).
+    """
+
+    __tablename__ = "approval_step_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    step_id: Mapped[int] = mapped_column(ForeignKey("approval_steps.id"))
+    previous_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    previous_state: Mapped[str] = mapped_column(String(20))
+    new_decision: Mapped[str] = mapped_column(String(20))
+    new_state: Mapped[str] = mapped_column(String(20))
+    changed_by_id: Mapped[int] = mapped_column(ForeignKey("app_users.id"))
+    changed_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    reason: Mapped[str] = mapped_column(String(200), default="")
 
 
 class Evaluation(Base):
@@ -359,8 +437,13 @@ class EvaluationKpiRow(Base):
 
 
 class AppUser(Base):
-    """Lightweight user directory - no login/passwords. Assignable as a named approver on a
-    WorkflowStepTemplate, and (later) usable for department-scoped data visibility.
+    """User directory - assignable as a named approver on a WorkflowStepTemplate, and (when
+    `role` is set) a real Microsoft-SSO login identity with page/action access via that role.
+
+    `email` is intentionally not unique - one person can hold multiple approver personas (e.g.
+    the same person as both Procurement Director and CFO on different chains). Login resolves to
+    the first active row for that email that has a non-null `role` - only one duplicate-email row
+    should ever carry a role.
     """
 
     __tablename__ = "app_users"
@@ -371,6 +454,15 @@ class AppUser(Base):
     department: Mapped[str] = mapped_column(String(40))
     title: Mapped[str] = mapped_column(String(60))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Fixed access role - 'admin' | 'procurement_requester' | 'hr_requester' | 'approver' - or
+    # None if this row is a directory-only entry with no login rights.
+    role: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # Marks this row as the one-click test login for its role's quick-login slot (admin |
+    # requester | approver - see app/auth.py's quick_login_slot()). Only meaningful when `role`
+    # is set; only one active row per slot should carry this at a time (enforced in
+    # app/routers/users.py). Lets an admin move which real account backs each quick-login button
+    # from the Users page instead of it being hardcoded.
+    is_quick_login: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class WorkflowTemplate(Base):

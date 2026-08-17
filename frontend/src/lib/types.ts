@@ -132,6 +132,7 @@ export interface OraclePrOption {
   id: string;
   vendorName: string;
   projectName: string;
+  projectNo: string;
   serviceType: string;
   contractValueFmt: string;
 }
@@ -220,6 +221,8 @@ export interface IpcRow {
   status: string;
   color: string;
   bg: string;
+  oraclePushStatus: string;
+  oracleConfirmationCode: string | null;
 }
 
 export interface TrackingHeader {
@@ -234,6 +237,7 @@ export interface TrackingHeader {
   expiry: string;
   po: string | null;
   poRev: string | null;
+  poDffRef: string | null;
   pr: string;
 }
 
@@ -252,6 +256,7 @@ export interface VendorSubmission {
   submittedBy: string;
   submittedAt: string;
   status: string;
+  confirmationMessage: string | null;
 }
 
 export interface SummaryLineItem {
@@ -284,6 +289,7 @@ export interface ContractSummaryDoc {
   sourcePr: string;
   oraclePo: string | null;
   oraclePoRev: string | null;
+  oraclePoDffRef: string | null;
   status: string;
   createdAt: string;
   lineItems: SummaryLineItem[];
@@ -300,6 +306,8 @@ export interface ManpowerContext {
 
 export interface ManpowerRow {
   title: string;
+  nationality: string;
+  employeeCount: number;
   reg: string;
   regRate: string;
   ot: string;
@@ -316,7 +324,7 @@ export interface ManpowerRow {
 export interface ManpowerResponse {
   context: ManpowerContext;
   rows: ManpowerRow[];
-  total: { contract: string; invoiced: string; variance: string };
+  total: { employeeCount: number; contract: string; invoiced: string; variance: string };
   varianceNote: string | null;
   matchedTotal: string;
 }
@@ -361,11 +369,19 @@ export interface CoValueRow {
 }
 
 export interface ApprovalStepOut {
+  id: number | null;
   seq: number;
   role: string;
   name: string;
   meta: string;
-  state: "done" | "current" | "pending";
+  state: "done" | "current" | "pending" | "rejected" | "skipped";
+  decision: "approved" | "rejected" | null;
+  actedBy: string | null;
+  actedAt: string | null;
+}
+
+export interface ApprovalFlowInfo {
+  workflowName: string | null;
 }
 
 export interface ChangeOrderDetailResponse {
@@ -395,6 +411,7 @@ export interface PenaltyDetailResponse {
   status: string;
   fields: PenaltyField[];
   attachment: string;
+  attachments: AttachmentOut[];
   slaBreach: SlaBreach;
   approvalSteps: ApprovalStepOut[];
 }
@@ -496,6 +513,188 @@ export interface IpcCertificate {
   createdAt: string;
 }
 
+export interface IpcReportLine {
+  code: string;
+  prLineRef: string;
+  description: string;
+  uom: string;
+  contractQty: string;
+  unitRate: string;
+  contractTotal: string;
+  previousQty: string;
+  previousAmount: string;
+  currentQty: string;
+  currentAmount: string;
+  totalQty: string;
+  totalAmount: string;
+}
+
+export interface IpcReportTotals {
+  boqGrossTotal: string;
+  previousAmountTotal: string;
+  currentAmountTotal: string;
+  totalExecutedToDate: string;
+  retentionPct: string;
+  retentionCurrent: string;
+  retentionToDate: string;
+  advancePct: string;
+  advanceRecoveredCurrent: string;
+  advanceRecoveredToDate: string;
+  netPayableCurrent: string;
+  netPayableToDate: string;
+}
+
+export interface IpcReportAdvanceTracker {
+  advancePaid: string;
+  advanceRecoveredToDate: string;
+  outstandingAdvance: string;
+}
+
+export interface IpcReportRetentionTracker {
+  retentionHeldToDate: string;
+  retentionReleased: string;
+  netRetention: string;
+}
+
+export interface IpcReport {
+  contractId: string;
+  vendor: string;
+  contractorNo: string;
+  project: string;
+  projectNo: string;
+  oraclePo: string | null;
+  oraclePoRev: string | null;
+  sourcePr: string | null;
+  ipcNumber: string;
+  period: string;
+  status: string;
+  createdAt: string;
+  lines: IpcReportLine[];
+  totals: IpcReportTotals;
+  advanceTracker: IpcReportAdvanceTracker;
+  retentionTracker: IpcReportRetentionTracker;
+}
+
+export interface IpcInvoiceDeductionRow {
+  label: string;
+  rateLabel: string;
+  previous: string;
+  current: string;
+  toDate: string;
+}
+
+export interface IpcInvoiceTotals {
+  boqGrossTotal: string;
+  previousExecuted: string;
+  currentExecuted: string;
+  totalExecutedToDate: string;
+  vatPreviousTotal: string;
+  vatCurrentTotal: string;
+  vatToDateTotal: string;
+  totalExecutedInclVatToDate: string;
+  deductions: IpcInvoiceDeductionRow[];
+  totalDeductionPrevious: string;
+  totalDeductionCurrent: string;
+  totalDeductionToDate: string;
+  previousNetPaid: string;
+  netAmountCurrent: string;
+}
+
+export interface IpcInvoiceAdvanceStatement {
+  label: string;
+  pctOfContract: string;
+  amount: string;
+  recoveredToDate: string;
+  outstanding: string;
+  applicable: boolean;
+}
+
+export interface IpcInvoiceRetentionStatement {
+  pct: string;
+  ofAmount: string;
+  heldToDate: string;
+  released: string;
+  netRetention: string;
+}
+
+export interface IpcInvoice {
+  contractId: string;
+  vendor: string;
+  project: string;
+  projectNo: string;
+  location: string | null;
+  refNote: string | null;
+  erpRef: string | null;
+  contractNumber: string;
+  invoiceNumber: string;
+  date: string;
+  periodFrom: string | null;
+  periodTo: string | null;
+  status: string;
+  lines: IpcReportLine[];
+  totals: IpcInvoiceTotals;
+  advanceStatements: IpcInvoiceAdvanceStatement[];
+  lcStatement: IpcInvoiceAdvanceStatement;
+  retentionStatement: IpcInvoiceRetentionStatement;
+}
+
+export type AccessRole = "admin" | "procurement_requester" | "hr_requester" | "approver" | null;
+
+export interface IpcGrnLine {
+  code: string;
+  description: string;
+  uom: string;
+  contractQty: string;
+  unitRate: string;
+  claimedQtyToDate: string;
+  claimedAmountToDate: string;
+  grnQtyPrevious: string;
+  grnAmountPrevious: string;
+  grnQtyCurrent: string;
+  grnAmountCurrent: string;
+  grnQtyToDate: string;
+  grnAmountToDate: string;
+  variance: string;
+  matched: boolean;
+}
+
+export interface IpcGrnInvoiceTotals {
+  claimedGrossToDate: string;
+  claimedCompletionPct: string;
+  grnGrossPrevious: string;
+  grnGrossCurrent: string;
+  grnGrossToDate: string;
+  grnCompletionPct: string;
+  vatCurrentTotal: string;
+  vatToDateTotal: string;
+  deductions: IpcInvoiceDeductionRow[];
+  totalDeductionCurrent: string;
+  totalDeductionToDate: string;
+  previousNetPaid: string;
+  netAmountCurrent: string;
+  varianceCurrent: string;
+  varianceFlag: boolean;
+}
+
+export interface IpcGrnInvoice {
+  contractId: string;
+  vendor: string;
+  project: string;
+  projectNo: string;
+  location: string | null;
+  contractNumber: string;
+  invoiceNumber: string;
+  date: string;
+  periodFrom: string | null;
+  periodTo: string | null;
+  status: string;
+  lines: IpcGrnLine[];
+  totals: IpcGrnInvoiceTotals;
+  advanceStatements: IpcInvoiceAdvanceStatement[];
+  lcStatement: IpcInvoiceAdvanceStatement;
+  retentionStatement: IpcInvoiceRetentionStatement;
+}
+
 export interface AppUser {
   id: number;
   name: string;
@@ -503,6 +702,7 @@ export interface AppUser {
   department: string;
   title: string;
   active: boolean;
+  role: AccessRole;
 }
 
 export type WorkflowAppliesTo = "contract_scope" | "contract_manpower" | "change_order" | "penalty";

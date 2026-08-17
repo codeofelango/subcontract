@@ -52,4 +52,7 @@ async def seed_approval_steps(
         name = r["user"].name if r["user"] else (r.get("fallback_name") or raiser_name)
         state = "done" if i == 0 else ("current" if i == 1 else "pending")
         meta = "Completed" if state == "done" else ("Awaiting approval" if state == "current" else "Pending")
-        session.add(ApprovalStep(owner_type=owner_type, owner_id=owner_id, seq=i, role=r["role"], approver_name=name, state=state, meta_note=meta))
+        session.add(ApprovalStep(
+            owner_type=owner_type, owner_id=owner_id, seq=i, role=r["role"], approver_name=name,
+            approver_user_id=r["user"].id if r["user"] else None, state=state, meta_note=meta,
+        ))

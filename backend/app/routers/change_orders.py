@@ -6,17 +6,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.activity import log_activity
+from app.approval_actions import apply_decision, apply_revision, steps_to_out
+from app.auth import assert_contract_visible, get_current_user, require_roles
 from app.business import co_value_impact, fmt_num, money
 from app.database import get_session
-from app.models import ApprovalStep, ChangeOrder, ChangeOrderLine, Contract, ContractLineItem
+from app.email_service import send_workflow_notification
+from app.models import ApprovalStep, AppUser, ChangeOrder, ChangeOrderLine, Contract, ContractLineItem
 from app.schemas.change_orders import (
-    ApprovalStepOut,
     ChangeOrderDetailResponse,
     CoContext,
     CoHistoryRow,
     CoLineRow,
     CoValueRow,
+    DecisionRequest,
     NewChangeOrderRequest,
+    ReviseDecisionRequest,
 )
 from app.workflow_engine import seed_approval_steps
 
@@ -38,10 +42,13 @@ async def _steps_for(session: AsyncSession, co_id: str) -> list[ApprovalStep]:
 
 
 @router.get("/{contract_id}", response_model=ChangeOrderDetailResponse)
-async def get_change_orders(contract_id: str, session: AsyncSession = Depends(get_session)) -> ChangeOrderDetailResponse:
+async def get_change_orders(
+    contract_id: str, session: AsyncSession = Depends(get_session), current_user: AppUser = Depends(get_current_user)
+) -> ChangeOrderDetailResponse:
     contract = await session.get(Contract, contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
+    assert_contract_visible(current_user, contract)
 
     result = await session.execute(select(ChangeOrder).where(ChangeOrder.contract_id == contract_id).order_by(ChangeOrder.created_at))
     cos = list(result.scalars().all())
@@ -75,7 +82,7 @@ async def get_change_orders(contract_id: str, session: AsyncSession = Depends(ge
     ]
 
     steps = await _steps_for(session, active.id)
-    approval_steps = [ApprovalStepOut(seq=s.seq, role=s.role, name=s.approver_name, meta=s.meta_note, state=s.state) for s in steps]
+    approval_steps = await steps_to_out(session, steps)
 
     history = []
     for co in cos:
@@ -100,18 +107,53 @@ def status_colors_co(status: str) -> tuple[str, str]:
     return {"Approved": ("#12805c", "#e6f4ee"), "In Approval": ("#b45309", "#fbf1e3"), "Draft": ("#667085", "#f0f1f4")}.get(status, ("#667085", "#f0f1f4"))
 
 
-@router.post("", status_code=201)
-async def create_change_order(payload: NewChangeOrderRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def _notify_current_step(session: AsyncSession, co: ChangeOrder, steps: list[ApprovalStep]) -> None:
+    current = next((s for s in steps if s.state == "current"), None)
+    if not current or not current.approver_user_id:
+        return
+    approver = await session.get(AppUser, current.approver_user_id)
+    if not approver:
+        return
+    await send_workflow_notification(
+        to_email=approver.email, to_name=approver.name, heading=f"Awaiting your approval — {co.id}",
+        owner_type="change_order", owner_id=co.id,
+        rows=[("Title", co.title), ("Reason", co.reason), ("Your role", current.role)],
+        link_path=f"/change-orders/{co.contract_id}",
+    )
+
+
+async def _notify_requester(session: AsyncSession, co: ChangeOrder, heading: str, extra_rows: list[tuple[str, str]]) -> None:
+    if not co.created_by_id:
+        return
+    requester = await session.get(AppUser, co.created_by_id)
+    if not requester:
+        return
+    await send_workflow_notification(
+        to_email=requester.email, to_name=requester.name, heading=heading,
+        owner_type="change_order", owner_id=co.id,
+        rows=[("Title", co.title), ("Reason", co.reason), *extra_rows],
+        link_path=f"/change-orders/{co.contract_id}",
+    )
+
+
+@router.post("", status_code=201, dependencies=[Depends(require_roles("admin", "procurement_requester"))])
+async def create_change_order(
+    payload: NewChangeOrderRequest, session: AsyncSession = Depends(get_session), current_user: AppUser = Depends(get_current_user)
+) -> dict:
     contract = await session.get(Contract, payload.contractId)
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
+    assert_contract_visible(current_user, contract)
 
     result = await session.execute(select(ChangeOrder).where(ChangeOrder.contract_id == payload.contractId))
     count = len(result.scalars().all())
     year = datetime.date.today().year
     co_id = f"CO-{year}-{count + 1:03d}"
 
-    co = ChangeOrder(id=co_id, contract_id=payload.contractId, title=payload.title, reason=payload.reason, status="In Approval", po_revision_label="Rev pending")
+    co = ChangeOrder(
+        id=co_id, contract_id=payload.contractId, title=payload.title, reason=payload.reason,
+        status="In Approval", po_revision_label="Rev pending", created_by_id=current_user.id,
+    )
     session.add(co)
     for line in payload.lines:
         session.add(ChangeOrderLine(
@@ -129,42 +171,41 @@ async def create_change_order(payload: NewChangeOrderRequest, session: AsyncSess
         summary=f"Change order {co_id} raised for {contract.vendor_name} ({payload.contractId}) — {payload.reason}",
     )
     await session.commit()
+    await session.refresh(co)
+    await _notify_current_step(session, co, await _steps_for(session, co_id))
     return {"id": co_id, "status": "In Approval"}
 
 
-@router.post("/{co_id}/advance-step")
-async def advance_step(co_id: str, session: AsyncSession = Depends(get_session)) -> dict:
+@router.post("/{co_id}/decide")
+async def decide_step(
+    co_id: str, payload: DecisionRequest, session: AsyncSession = Depends(get_session), current_user: AppUser = Depends(get_current_user)
+) -> dict:
     co = await session.get(ChangeOrder, co_id)
     if not co:
         raise HTTPException(status_code=404, detail="Change order not found")
 
     steps = await _steps_for(session, co_id)
-    current_idx = next((idx for idx, s in enumerate(steps) if s.state == "current"), None)
-    if current_idx is None:
-        raise HTTPException(status_code=400, detail="No current step to advance")
+    result = apply_decision(steps, current_user, payload.decision, payload.comment)
 
-    steps[current_idx].state = "done"
-    steps[current_idx].meta_note = "Completed"
-    completed_role = steps[current_idx].role
-    if current_idx + 1 < len(steps):
-        steps[current_idx + 1].state = "current"
-        steps[current_idx + 1].meta_note = "Awaiting approval"
-        summary = f"Change order {co_id} — step '{completed_role}' completed, now awaiting '{steps[current_idx + 1].role}'"
-    else:
+    if result.result == "rejected":
+        co.status = "Rejected"
+        summary = f"Change order {co_id} rejected at step '{result.step.role}' by {current_user.name}"
+        await _notify_requester(session, co, f"Change order {co.id} was rejected", [("Rejected by", current_user.name), ("Comment", payload.comment or "—")])
+    elif result.result == "completed":
         co.status = "Approved"
         contract = await session.get(Contract, co.contract_id)
         applied = 0
         if contract:
-            if contract.oracle_po_rev:
-                rev_num = int(contract.oracle_po_rev.split(" ")[-1]) + 1
-                contract.oracle_po_rev = f"Rev {rev_num}"
-                co.po_revision_label = contract.oracle_po_rev
-
             co_lines = (await session.execute(select(ChangeOrderLine).where(ChangeOrderLine.change_order_id == co_id))).scalars().all()
             contract_lines = (
                 await session.execute(select(ContractLineItem).where(ContractLineItem.contract_id == co.contract_id))
             ).scalars().all()
             lines_by_code = {cl.code: cl for cl in contract_lines}
+
+            if contract.oracle_po_rev:
+                rev_num = int(contract.oracle_po_rev.split(" ")[-1]) + 1
+                contract.oracle_po_rev = f"Rev {rev_num}"
+                co.po_revision_label = contract.oracle_po_rev
 
             net_impact = Decimal("0")
             for co_line in co_lines:
@@ -179,7 +220,65 @@ async def advance_step(co_id: str, session: AsyncSession = Depends(get_session))
             contract.contract_value = contract.contract_value + net_impact
 
         summary = f"Change order {co_id} approved — PO revised to {co.po_revision_label}, {applied} line item(s) revised on contract"
+        await _notify_requester(session, co, f"Change order {co.id} was approved", [("PO revision", co.po_revision_label)])
+    else:
+        summary = f"Change order {co_id} — step '{result.step.role}' {payload.decision} by {current_user.name}, now awaiting '{result.next_step.role}'"
+        await _notify_current_step(session, co, steps)
 
-    log_activity(session, entity_type="change_order", entity_id=co_id, action="step_advanced", contract_id=co.contract_id, summary=summary)
+    log_activity(session, entity_type="change_order", entity_id=co_id, action="step_decided", contract_id=co.contract_id, summary=summary)
+    await session.commit()
+    return {"id": co_id, "status": co.status}
+
+
+@router.post("/{co_id}/steps/{step_id}/revise")
+async def revise_step(
+    co_id: str, step_id: int, payload: ReviseDecisionRequest, session: AsyncSession = Depends(get_session),
+    current_user: AppUser = Depends(get_current_user),
+) -> dict:
+    co = await session.get(ChangeOrder, co_id)
+    if not co:
+        raise HTTPException(status_code=404, detail="Change order not found")
+
+    steps = await _steps_for(session, co_id)
+    step = next((s for s in steps if s.id == step_id), None)
+    if not step:
+        raise HTTPException(status_code=404, detail="Approval step not found")
+
+    result = apply_revision(steps, step, current_user, payload.decision, payload.reason, session)
+
+    if result.result == "rejected":
+        co.status = "Rejected"
+        summary = f"Change order {co_id} — step '{result.step.role}' revised to rejected by {current_user.name} ({payload.reason})"
+    elif result.result == "completed":
+        co.status = "Approved"
+        contract = await session.get(Contract, co.contract_id)
+        if contract:
+            co_lines = (await session.execute(select(ChangeOrderLine).where(ChangeOrderLine.change_order_id == co_id))).scalars().all()
+            contract_lines = (
+                await session.execute(select(ContractLineItem).where(ContractLineItem.contract_id == co.contract_id))
+            ).scalars().all()
+            lines_by_code = {cl.code: cl for cl in contract_lines}
+            if contract.oracle_po_rev:
+                rev_num = int(contract.oracle_po_rev.split(" ")[-1]) + 1
+                contract.oracle_po_rev = f"Rev {rev_num}"
+                co.po_revision_label = contract.oracle_po_rev
+            net_impact = Decimal("0")
+            for co_line in co_lines:
+                net_impact += co_value_impact(co_line.original_qty, co_line.revised_qty, co_line.contract_rate)
+                matching = lines_by_code.get(co_line.code)
+                if matching:
+                    matching.previous_qty = matching.qty
+                    matching.qty = co_line.revised_qty
+                    matching.total = matching.qty * matching.unit_rate
+                    matching.revised_by_co = co_id
+            contract.contract_value = contract.contract_value + net_impact
+        summary = f"Change order {co_id} — step '{result.step.role}' revised to approved by {current_user.name} ({payload.reason})"
+    else:
+        co.status = "In Approval"
+        summary = f"Change order {co_id} — step '{result.step.role}' revised to {payload.decision} by {current_user.name} ({payload.reason})"
+        await _notify_current_step(session, co, steps)
+
+    await _notify_requester(session, co, f"A decision on change order {co.id} was revised", [("Revised by", current_user.name), ("New decision", payload.decision), ("Reason", payload.reason)])
+    log_activity(session, entity_type="change_order", entity_id=co_id, action="step_revised", contract_id=co.contract_id, summary=summary)
     await session.commit()
     return {"id": co_id, "status": co.status}

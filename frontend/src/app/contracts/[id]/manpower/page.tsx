@@ -1,6 +1,8 @@
-import { getContractApprovalSteps, getContractAttachments, getManpowerContractSummary } from "@/lib/api";
+import { getContractApprovalFlow, getContractApprovalSteps, getContractAttachments, getManpowerContractSummary } from "@/lib/api";
+import { BackLink } from "@/components/ui/BackLink";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
+import { PrintButton } from "@/components/ui/PrintButton";
 import { ContractApprovalCard } from "../../ContractApprovalCard";
 import { AttachmentsCard } from "../../AttachmentsCard";
 
@@ -8,14 +10,16 @@ export const dynamic = "force-dynamic";
 
 export default async function ManpowerContractSummaryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [c, approvalSteps, attachments] = await Promise.all([
+  const [c, approvalSteps, approvalFlow, attachments] = await Promise.all([
     getManpowerContractSummary(id),
     getContractApprovalSteps(id),
+    getContractApprovalFlow(id),
     getContractAttachments(id),
   ]);
 
   return (
-    <div className="flex flex-col gap-[18px] max-w-[1200px]">
+    <div className="flex flex-col gap-[18px] max-w-[1200px] print:max-w-none">
+      <BackLink href="/contracts" label="Back to Contracts" />
       <Card padding="18px 20px" className="flex items-center gap-[20px] flex-wrap">
         <div>
           <div className="flex items-center gap-[10px]">
@@ -41,9 +45,10 @@ export default async function ManpowerContractSummaryPage({ params }: { params: 
             <div className="text-[20px] font-bold font-mono">{c.contractBudget}</div>
           </div>
         </div>
+        <PrintButton label="Download Contract Form" />
       </Card>
 
-      <ContractApprovalCard contractId={c.id} steps={approvalSteps} />
+      <ContractApprovalCard contractId={c.id} steps={approvalSteps} workflowName={approvalFlow.workflowName} />
       <AttachmentsCard attachments={attachments} />
 
       <div className="grid grid-cols-4 gap-[14px]">

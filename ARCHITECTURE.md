@@ -197,7 +197,7 @@ GET  /penalties/{id}
      → { fields: [...], slaBreach: {...}, approvalSteps: [...] }
 
 POST /penalties
-     body: NewPenaltyRequest (contractId, reason, basis, amount, attachmentRef, slaActualPct, slaTargetPct, slaBreachMonths)
+     body: NewPenaltyRequest (contractId, reason, basis, amount, draftToken, slaActualPct, slaTargetPct, slaBreachMonths)
      → Penalty (status='In Approval', 6-step chain seeded as pending except step 1 = done)
 
 POST /penalties/{id}/advance-step

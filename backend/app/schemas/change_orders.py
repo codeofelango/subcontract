@@ -1,3 +1,5 @@
+import datetime
+
 from pydantic import BaseModel
 
 
@@ -41,11 +43,25 @@ class CoValueRow(BaseModel):
 
 
 class ApprovalStepOut(BaseModel):
+    id: int | None = None
     seq: int
     role: str
     name: str
     meta: str
-    state: str  # done | current | pending
+    state: str  # done | current | pending | rejected | skipped
+    decision: str | None = None  # approved | rejected
+    actedBy: str | None = None
+    actedAt: datetime.datetime | None = None
+
+
+class DecisionRequest(BaseModel):
+    decision: str  # "approved" | "rejected"
+    comment: str | None = None
+
+
+class ReviseDecisionRequest(BaseModel):
+    decision: str  # "approved" | "rejected"
+    reason: str
 
 
 class ChangeOrderDetailResponse(BaseModel):

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from app.schemas.attachments import AttachmentOut
 from app.schemas.change_orders import ApprovalStepOut
 
 
@@ -22,6 +23,7 @@ class PenaltyDetailResponse(BaseModel):
     status: str
     fields: list[PenaltyField]
     attachment: str
+    attachments: list[AttachmentOut]
     slaBreach: SlaBreach
     approvalSteps: list[ApprovalStepOut]
 
@@ -31,7 +33,7 @@ class NewPenaltyRequest(BaseModel):
     reason: str
     basis: str
     amount: float
-    attachmentRef: str
+    draftToken: str
     raisedBy: str
     slaActualPct: float
     slaTargetPct: float

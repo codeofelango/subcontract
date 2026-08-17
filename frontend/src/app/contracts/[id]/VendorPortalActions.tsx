@@ -25,7 +25,7 @@ export function CertifyButton({ contractId, submissionId }: { contractId: string
       disabled={busy}
       className="bg-[#3a5bd9] rounded-[7px] px-[12px] py-[6px] text-[12px] font-semibold text-white hover:brightness-[1.08] disabled:opacity-50"
     >
-      {busy ? "Certifying…" : "Certify → Create IPC"}
+      {busy ? "Approving…" : "Approve → Create GRN"}
     </button>
   );
 }

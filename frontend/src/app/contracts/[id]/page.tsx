@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { FileDown } from "lucide-react";
-import { getContractApprovalSteps, getContractAttachments, getContractTracking, getVendorSubmissions } from "@/lib/api";
+import { FileDown, FileSpreadsheet, PackageCheck, Receipt } from "lucide-react";
+import { getContractApprovalFlow, getContractApprovalSteps, getContractAttachments, getContractTracking, getVendorSubmissions } from "@/lib/api";
+import { BackLink } from "@/components/ui/BackLink";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -12,16 +13,18 @@ export const dynamic = "force-dynamic";
 
 export default async function ContractTrackingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, vendorSubmissions, approvalSteps, attachments] = await Promise.all([
+  const [data, vendorSubmissions, approvalSteps, approvalFlow, attachments] = await Promise.all([
     getContractTracking(id),
     getVendorSubmissions(id),
     getContractApprovalSteps(id),
+    getContractApprovalFlow(id),
     getContractAttachments(id),
   ]);
   const { header, finance, trackers, ipcs } = data;
 
   return (
     <div className="flex flex-col gap-[18px] max-w-[1280px]">
+      <BackLink href="/contracts" label="Back to Contracts" />
       {/* Header card */}
       <Card padding="18px 20px" className="flex items-center gap-[20px] flex-wrap">
         <div>
@@ -42,9 +45,16 @@ export default async function ContractTrackingPage({ params }: { params: Promise
             <span className="flex items-center gap-[6px] text-[11.5px] font-medium px-[10px] py-[4px] rounded-[7px] bg-[#f0f1f4] text-[#475467]">
               Source PR <span className="font-mono font-semibold">{header.pr}</span>
             </span>
+            {header.poDffRef && (
+              <span className="flex items-center gap-[6px] text-[11.5px] font-medium px-[10px] py-[4px] rounded-[7px] bg-[#f0ecfb] text-[#7a5bd9]">
+                PO DFF Contract Ref <span className="font-mono font-semibold">{header.poDffRef}</span>
+              </span>
+            )}
           </div>
           <div className="text-[11px] text-[#98a2b3] mt-[6px] max-w-[440px] leading-[1.4]">
-            PO auto-created in Oracle on approval; Source PR is the approved Oracle requisition that triggered this contract.
+            PO auto-created in Oracle on approval, with this contract's number written into the PO's Descriptive
+            Flexfield (DFF) so the PO can be traced back to it; Source PR is the approved Oracle requisition that
+            triggered this contract.
           </div>
         </div>
         <div className="flex-1" />
@@ -74,7 +84,7 @@ export default async function ContractTrackingPage({ params }: { params: Promise
         </Link>
       </Card>
 
-      <ContractApprovalCard contractId={header.id} steps={approvalSteps} />
+      <ContractApprovalCard contractId={header.id} steps={approvalSteps} workflowName={approvalFlow.workflowName} />
       <AttachmentsCard attachments={attachments} />
 
       {/* Finance cards */}
@@ -113,12 +123,12 @@ export default async function ContractTrackingPage({ params }: { params: Promise
         ))}
       </div>
 
-      {/* Vendor Portal Submission - work progress claimed by the subcontractor via the Oracle vendor portal */}
+      {/* Invoice Submission - work progress claimed by the subcontractor via the Oracle vendor portal */}
       <Card padding="0" className="overflow-hidden">
         <div className="px-[18px] py-[14px] border-b border-[#e6e8ec] flex items-center justify-between">
           <div>
-            <div className="font-semibold text-[14px]">Vendor Portal Submission</div>
-            <div className="text-[11px] text-[#98a2b3] mt-[2px]">Work-progress claims from the Oracle vendor portal</div>
+            <div className="font-semibold text-[14px]">Invoice Submission</div>
+            <div className="text-[11px] text-[#98a2b3] mt-[2px]">Work-progress invoices submitted via the Oracle vendor portal</div>
           </div>
         </div>
         {vendorSubmissions.length === 0 ? (
@@ -149,8 +159,12 @@ export default async function ContractTrackingPage({ params }: { params: Promise
                       {s.status}
                     </Pill>
                   </td>
-                  <td className="px-[16px] py-[11px] text-right">
-                    {s.status === "Submitted" && <CertifyButton contractId={header.id} submissionId={s.id} />}
+                  <td className="px-[16px] py-[11px] text-right max-w-[280px]">
+                    {s.status === "Submitted" ? (
+                      <CertifyButton contractId={header.id} submissionId={s.id} />
+                    ) : (
+                      s.confirmationMessage && <span className="text-[11.5px] font-medium text-[#12805c]">{s.confirmationMessage}</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -159,13 +173,13 @@ export default async function ContractTrackingPage({ params }: { params: Promise
         )}
       </Card>
 
-      {/* IPC schedule */}
+      {/* GRN List (IPC schedule) */}
       <Card padding="0" className="overflow-hidden">
-        <div className="px-[18px] py-[14px] border-b border-[#e6e8ec] font-semibold text-[14px]">Progress Payment Certificates (IPC)</div>
+        <div className="px-[18px] py-[14px] border-b border-[#e6e8ec] font-semibold text-[14px]">GRN List</div>
         <table className="w-full border-collapse text-[12.5px]">
           <thead>
             <tr className="text-left text-[#667085] text-[10.5px] uppercase tracking-[.04em] bg-[#fafbfc]">
-              <th className="px-[16px] py-[10px] font-semibold">IPC</th>
+              <th className="px-[16px] py-[10px] font-semibold">GRN</th>
               <th className="px-[16px] py-[10px] font-semibold">Period</th>
               <th className="px-[16px] py-[10px] font-semibold text-right">Work Done</th>
               <th className="px-[16px] py-[10px] font-semibold text-right">Gross</th>
@@ -192,13 +206,36 @@ export default async function ContractTrackingPage({ params }: { params: Promise
                   </Pill>
                 </td>
                 <td className="px-[16px] py-[11px] text-right">
-                  <Link
-                    href={`/contracts/${header.id}/ipcs/${i.id}/certificate`}
-                    className="flex items-center gap-[5px] text-[11.5px] font-semibold text-[#3a5bd9] hover:underline whitespace-nowrap"
-                  >
-                    <FileDown size={13} strokeWidth={2} />
-                    Certificate
-                  </Link>
+                  <div className="flex items-center justify-end gap-[14px]">
+                    <Link
+                      href={`/contracts/${header.id}/ipcs/${i.id}/certificate`}
+                      className="flex items-center gap-[5px] text-[11.5px] font-semibold text-[#3a5bd9] hover:underline whitespace-nowrap"
+                    >
+                      <FileDown size={13} strokeWidth={2} />
+                      Certificate
+                    </Link>
+                    <Link
+                      href={`/contracts/${header.id}/ipcs/${i.id}/report`}
+                      className="flex items-center gap-[5px] text-[11.5px] font-semibold text-[#475467] hover:underline whitespace-nowrap"
+                    >
+                      <FileSpreadsheet size={13} strokeWidth={2} />
+                      BOQ Report
+                    </Link>
+                    <Link
+                      href={`/contracts/${header.id}/ipcs/${i.id}/invoice`}
+                      className="flex items-center gap-[5px] text-[11.5px] font-semibold text-[#7a5bd9] hover:underline whitespace-nowrap"
+                    >
+                      <Receipt size={13} strokeWidth={2} />
+                      Invoice
+                    </Link>
+                    <Link
+                      href={`/contracts/${header.id}/ipcs/${i.id}/grn-invoice`}
+                      className="flex items-center gap-[5px] text-[11.5px] font-semibold text-[#2c7fb0] hover:underline whitespace-nowrap"
+                    >
+                      <PackageCheck size={13} strokeWidth={2} />
+                      GRN Invoice
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

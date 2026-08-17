@@ -120,6 +120,7 @@ class OraclePrOptionOut(BaseModel):
     id: str
     vendorName: str
     projectName: str
+    projectNo: str
     serviceType: str
     contractValueFmt: str
 
@@ -227,6 +228,8 @@ class IpcRow(BaseModel):
     status: str
     color: str
     bg: str
+    oraclePushStatus: str
+    oracleConfirmationCode: str | None
 
 
 class TrackingHeader(BaseModel):
@@ -241,6 +244,7 @@ class TrackingHeader(BaseModel):
     expiry: str
     po: str | None
     poRev: str | None
+    poDffRef: str | None
     pr: str | None
 
 
@@ -262,6 +266,11 @@ class ApproveContractResponse(BaseModel):
     status: str
     oracle_po: str | None
     oracle_po_rev: str | None
+    oracle_po_dff_ref: str | None
+
+
+class ApprovalFlowInfo(BaseModel):
+    workflowName: str | None
 
 
 class IpcCertificateResponse(BaseModel):
@@ -287,6 +296,209 @@ class IpcCertificateResponse(BaseModel):
     createdAt: str
 
 
+class IpcReportLineOut(BaseModel):
+    """One BOQ line's execution breakdown within an IPC report — the gross amount certified for
+    this IPC is apportioned across BOQ lines pro-rata to each line's share of the contract BOQ total."""
+
+    code: str
+    prLineRef: str
+    description: str
+    uom: str
+    contractQty: str
+    unitRate: str
+    contractTotal: str
+    previousQty: str
+    previousAmount: str
+    currentQty: str
+    currentAmount: str
+    totalQty: str
+    totalAmount: str
+
+
+class IpcReportTotals(BaseModel):
+    boqGrossTotal: str
+    previousAmountTotal: str
+    currentAmountTotal: str
+    totalExecutedToDate: str
+    retentionPct: str
+    retentionCurrent: str
+    retentionToDate: str
+    advancePct: str
+    advanceRecoveredCurrent: str
+    advanceRecoveredToDate: str
+    netPayableCurrent: str
+    netPayableToDate: str
+
+
+class IpcReportAdvanceTracker(BaseModel):
+    advancePaid: str
+    advanceRecoveredToDate: str
+    outstandingAdvance: str
+
+
+class IpcReportRetentionTracker(BaseModel):
+    retentionHeldToDate: str
+    retentionReleased: str
+    netRetention: str
+
+
+class IpcReportResponse(BaseModel):
+    """BOQ-level progress payment report for one IPC — breaks the certified gross amount down by
+    BOQ line item (Previous / Current / Total executed qty & amount), for internal PMO/QS review.
+    Complements the simpler IpcCertificateResponse, which is the flat vendor-facing certificate."""
+
+    contractId: str
+    vendor: str
+    contractorNo: str
+    project: str
+    projectNo: str
+    oraclePo: str | None
+    oraclePoRev: str | None
+    sourcePr: str | None
+    ipcNumber: str
+    period: str
+    status: str
+    createdAt: str
+    lines: list[IpcReportLineOut]
+    totals: IpcReportTotals
+    advanceTracker: IpcReportAdvanceTracker
+    retentionTracker: IpcReportRetentionTracker
+
+
+class IpcInvoiceDeductionRow(BaseModel):
+    """One deduction line (Retention / VAT / Advance Tranche / Equipment Rental) with its
+    Previous / Current / Total-to-date breakdown, matching the vendor invoice layout."""
+
+    label: str
+    rateLabel: str
+    previous: str
+    current: str
+    toDate: str
+
+
+class IpcInvoiceTotals(BaseModel):
+    boqGrossTotal: str
+    previousExecuted: str
+    currentExecuted: str
+    totalExecutedToDate: str
+    vatPreviousTotal: str
+    vatCurrentTotal: str
+    vatToDateTotal: str
+    totalExecutedInclVatToDate: str
+    deductions: list[IpcInvoiceDeductionRow]
+    totalDeductionPrevious: str
+    totalDeductionCurrent: str
+    totalDeductionToDate: str
+    previousNetPaid: str
+    netAmountCurrent: str
+
+
+class IpcInvoiceAdvanceStatement(BaseModel):
+    label: str
+    pctOfContract: str
+    amount: str
+    recoveredToDate: str
+    outstanding: str
+    applicable: bool
+
+
+class IpcInvoiceRetentionStatement(BaseModel):
+    pct: str
+    ofAmount: str
+    heldToDate: str
+    released: str
+    netRetention: str
+
+
+class IpcInvoiceResponse(BaseModel):
+    """Full vendor invoice / payment certificate document for one IPC - mirrors the subcontractor's
+    own Excel invoice workbook (Invoice + Payment Certificate sheets): BOQ execution breakdown plus
+    VAT, dual advance-tranche recovery, equipment rental deduction, and a letter-of-credit tracker."""
+
+    contractId: str
+    vendor: str
+    project: str
+    projectNo: str
+    location: str | None
+    refNote: str | None
+    erpRef: str | None
+    contractNumber: str
+    invoiceNumber: str
+    date: str
+    periodFrom: str | None
+    periodTo: str | None
+    status: str
+    lines: list[IpcReportLineOut]
+    totals: IpcInvoiceTotals
+    advanceStatements: list[IpcInvoiceAdvanceStatement]
+    lcStatement: IpcInvoiceAdvanceStatement
+    retentionStatement: IpcInvoiceRetentionStatement
+
+
+class IpcGrnLineOut(BaseModel):
+    """One BOQ line's receipt-verified execution, compared against the vendor's self-declared claim
+    for the same line. GRN qty/amount comes from actual Goods Receipt Note events; claimed comes from
+    apportioning the certified IPC's work-done % across BOQ lines (same basis as the Invoice report)."""
+
+    code: str
+    description: str
+    uom: str
+    contractQty: str
+    unitRate: str
+    claimedQtyToDate: str
+    claimedAmountToDate: str
+    grnQtyPrevious: str
+    grnAmountPrevious: str
+    grnQtyCurrent: str
+    grnAmountCurrent: str
+    grnQtyToDate: str
+    grnAmountToDate: str
+    variance: str
+    matched: bool
+
+
+class IpcGrnInvoiceTotals(BaseModel):
+    claimedGrossToDate: str
+    claimedCompletionPct: str
+    grnGrossPrevious: str
+    grnGrossCurrent: str
+    grnGrossToDate: str
+    grnCompletionPct: str
+    vatCurrentTotal: str
+    vatToDateTotal: str
+    deductions: list[IpcInvoiceDeductionRow]
+    totalDeductionCurrent: str
+    totalDeductionToDate: str
+    previousNetPaid: str
+    netAmountCurrent: str
+    varianceCurrent: str
+    varianceFlag: bool
+
+
+class IpcGrnInvoiceResponse(BaseModel):
+    """Invoice / payment certificate whose percentage-completion and billed amounts are grounded in
+    Goods Receipt Note (GRN) data - actual received quantities per BOQ line - rather than the vendor's
+    self-declared work-done %. Reuses the same VAT / advance-tranche / retention / LC mechanism as
+    IpcInvoiceResponse, applied to the GRN-verified gross instead of the certified IPC's gross."""
+
+    contractId: str
+    vendor: str
+    project: str
+    projectNo: str
+    location: str | None
+    contractNumber: str
+    invoiceNumber: str
+    date: str
+    periodFrom: str | None
+    periodTo: str | None
+    status: str
+    lines: list[IpcGrnLineOut]
+    totals: IpcGrnInvoiceTotals
+    advanceStatements: list[IpcInvoiceAdvanceStatement]
+    lcStatement: IpcInvoiceAdvanceStatement
+    retentionStatement: IpcInvoiceRetentionStatement
+
+
 class VendorSubmissionOut(BaseModel):
     """A subcontractor's work-progress claim, simulating the Oracle vendor portal feed."""
 
@@ -297,6 +509,7 @@ class VendorSubmissionOut(BaseModel):
     submittedBy: str
     submittedAt: str
     status: str  # 'Submitted' | 'Certified'
+    confirmationMessage: str | None = None
 
 
 class SummaryLineItemOut(BaseModel):
@@ -331,6 +544,7 @@ class ContractSummaryDocResponse(BaseModel):
     sourcePr: str | None
     oraclePo: str | None
     oraclePoRev: str | None
+    oraclePoDffRef: str | None
     status: str
     createdAt: str
     lineItems: list[SummaryLineItemOut]

@@ -12,7 +12,15 @@ const inputCls =
 
 const DEPARTMENTS = ["Procurement", "HR", "Finance", "PMO", "Executive", "QAQC"];
 
-const emptyDraft: UserInput = { name: "", email: "", department: DEPARTMENTS[0], title: "", active: true };
+const ROLES: Array<{ value: UserInput["role"]; label: string }> = [
+  { value: null, label: "No access" },
+  { value: "admin", label: "Admin" },
+  { value: "procurement_requester", label: "Procurement Requester" },
+  { value: "hr_requester", label: "HR Requester" },
+  { value: "approver", label: "Approver" },
+];
+
+const emptyDraft: UserInput = { name: "", email: "", department: DEPARTMENTS[0], title: "", active: true, role: null };
 
 export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
   const [users, setUsers] = useState(initialUsers);
@@ -39,7 +47,7 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
 
   function startEdit(u: AppUser) {
     setEditingId(u.id);
-    setEditDraft({ name: u.name, email: u.email, department: u.department, title: u.title, active: u.active });
+    setEditDraft({ name: u.name, email: u.email, department: u.department, title: u.title, active: u.active, role: u.role });
   }
 
   async function submitEdit(id: number) {
@@ -71,6 +79,7 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
             <th className="px-[16px] py-[10px] font-semibold">Email</th>
             <th className="px-[16px] py-[10px] font-semibold">Department</th>
             <th className="px-[16px] py-[10px] font-semibold">Title</th>
+            <th className="px-[16px] py-[10px] font-semibold">Access Role</th>
             <th className="px-[16px] py-[10px] font-semibold">Status</th>
             <th className="px-[16px] py-[10px] font-semibold w-[80px]" />
           </tr>
@@ -100,6 +109,19 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
                 <td className="px-[16px] py-[8px]">
                   <select
                     className={inputCls}
+                    value={editDraft.role ?? ""}
+                    onChange={(e) => setEditDraft((d) => ({ ...d, role: (e.target.value || null) as UserInput["role"] }))}
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r.label} value={r.value ?? ""}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-[16px] py-[8px]">
+                  <select
+                    className={inputCls}
                     value={editDraft.active ? "active" : "inactive"}
                     onChange={(e) => setEditDraft((d) => ({ ...d, active: e.target.value === "active" }))}
                   >
@@ -124,6 +146,15 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
                 <td className="px-[16px] py-[11px] text-[#475467]">{u.email}</td>
                 <td className="px-[16px] py-[11px] text-[#475467]">{u.department}</td>
                 <td className="px-[16px] py-[11px] text-[#475467]">{u.title}</td>
+                <td className="px-[16px] py-[11px]">
+                  {u.role ? (
+                    <Pill color="#3a5bd9" bg="#eef1fd">
+                      {ROLES.find((r) => r.value === u.role)?.label ?? u.role}
+                    </Pill>
+                  ) : (
+                    <span className="text-[#98a2b3]">No access</span>
+                  )}
+                </td>
                 <td className="px-[16px] py-[11px]">
                   {u.active ? (
                     <Pill color="#12805c" bg="#e6f4ee">
@@ -166,6 +197,19 @@ export function UsersTable({ initialUsers }: { initialUsers: AppUser[] }) {
             </td>
             <td className="px-[16px] py-[8px]">
               <input placeholder="Title" className={inputCls} value={newDraft.title} onChange={(e) => setNewDraft((d) => ({ ...d, title: e.target.value }))} />
+            </td>
+            <td className="px-[16px] py-[8px]">
+              <select
+                className={inputCls}
+                value={newDraft.role ?? ""}
+                onChange={(e) => setNewDraft((d) => ({ ...d, role: (e.target.value || null) as UserInput["role"] }))}
+              >
+                {ROLES.map((r) => (
+                  <option key={r.label} value={r.value ?? ""}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
             </td>
             <td className="px-[16px] py-[8px] text-[#98a2b3] text-[11.5px]">Active</td>
             <td className="px-[16px] py-[8px]">

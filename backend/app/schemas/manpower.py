@@ -12,6 +12,8 @@ class ManpowerContext(BaseModel):
 
 class ManpowerRow(BaseModel):
     title: str
+    nationality: str
+    employeeCount: int
     reg: str
     regRate: str
     ot: str
@@ -26,6 +28,7 @@ class ManpowerRow(BaseModel):
 
 
 class ManpowerTotal(BaseModel):
+    employeeCount: int
     contract: str
     invoiced: str
     variance: str

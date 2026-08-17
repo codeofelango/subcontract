@@ -23,6 +23,8 @@ import { Pill } from "@/components/ui/Pill";
 import type { AppUser, WorkflowDetail, WorkflowEdge, WorkflowNode, WorkflowNodeData } from "@/lib/types";
 
 const X_GAP = 240;
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 62;
 const inputCls =
   "w-full border border-[#e6e8ec] rounded-[7px] px-[10px] py-[7px] text-[12.5px] focus:outline-none focus:border-[#3a5bd9]";
 
@@ -164,6 +166,14 @@ export function CanvasEditor({ workflow, users }: { workflow: WorkflowDetail; us
         id: n.id,
         type: "step",
         position: n.position,
+        // Fixed dimensions + static handle bounds instead of relying on ResizeObserver
+        // measurement — avoids nodes/edges getting stuck unmeasured if that pass never settles.
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+        handles: [
+          { id: null, type: "target", position: Position.Left, x: 0, y: NODE_HEIGHT / 2, width: 1, height: 1 },
+          { id: null, type: "source", position: Position.Right, x: NODE_WIDTH, y: NODE_HEIGHT / 2, width: 1, height: 1 },
+        ],
         data: {
           label: n.data.label,
           userId: n.data.userId,
@@ -222,7 +232,13 @@ export function CanvasEditor({ workflow, users }: { workflow: WorkflowDetail; us
   return (
     <div className="flex flex-col gap-[14px]" style={{ height: "calc(100vh - 160px)" }}>
       <div className="flex items-center gap-[12px]">
-        <button type="button" onClick={() => router.push("/approval-flows")} className="text-[#98a2b3] hover:text-[#475467]">
+        <button
+          type="button"
+          onClick={() => router.push("/approval-flows")}
+          aria-label="Back to Approval Flows"
+          title="Back to Approval Flows"
+          className="text-[#98a2b3] hover:text-[#475467]"
+        >
           <ArrowLeft size={17} strokeWidth={2} />
         </button>
         <input

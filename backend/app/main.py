@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers import (
     activity,
+    approvals,
     attachments,
+    auth,
     change_orders,
     contracts,
     dashboard,
@@ -29,7 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(dashboard.router)
+app.include_router(approvals.router)
 app.include_router(contracts.router)
 app.include_router(manpower.router)
 app.include_router(change_orders.router)

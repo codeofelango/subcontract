@@ -1,8 +1,7 @@
 import { getChangeOrders } from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
-import { ApprovalTimeline } from "@/components/ui/ApprovalTimeline";
-import { ChangeOrderAdvanceButton } from "./ChangeOrderActions";
+import { ChangeOrderApprovalPanel } from "./ChangeOrderActions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +10,6 @@ const CONTRACT_ID = "SC-2024-0142";
 export default async function ChangeOrdersPage() {
   const data = await getChangeOrders(CONTRACT_ID);
   const { context, affectedLineItems, history, valueRows, approvalSteps } = data;
-  const hasCurrentStep = approvalSteps.some((s) => s.state === "current");
 
   return (
     <div className="grid grid-cols-[1fr_330px] gap-[22px] max-w-[1280px] items-start">
@@ -125,8 +123,7 @@ export default async function ChangeOrdersPage() {
         <Card>
           <div className="font-semibold text-[14px] mb-[4px]">Approval &amp; PO Revision</div>
           <div className="text-[12px] text-[#667085] mb-[16px]">Approved CO revises the Oracle PO</div>
-          <ApprovalTimeline steps={approvalSteps} size="sm" />
-          <ChangeOrderAdvanceButton coId={context.id} hasCurrentStep={hasCurrentStep} />
+          <ChangeOrderApprovalPanel coId={context.id} steps={approvalSteps} />
         </Card>
       </div>
     </div>

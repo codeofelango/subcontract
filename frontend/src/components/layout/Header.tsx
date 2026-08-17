@@ -1,9 +1,23 @@
 "use client";
 
-import { Menu, Plus, Search } from "lucide-react";
+import { useState } from "react";
+import { Menu, Plus, Search, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { useSidebar } from "./SidebarContext";
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  procurement_requester: "Procurement Requester",
+  hr_requester: "HR Requester",
+  approver: "Approver",
+};
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
 
 const PAGE_META: Array<{ match: (p: string) => boolean; title: string; subtitle: string }> = [
   { match: (p) => p === "/dashboard" || p === "/", title: "Portfolio Dashboard", subtitle: "Overview of subcontracts, spend, retention and alerts" },
@@ -24,7 +38,13 @@ const PAGE_META: Array<{ match: (p: string) => boolean; title: string; subtitle:
 export function Header() {
   const pathname = usePathname();
   const { toggle } = useSidebar();
+  const { data: session } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
   const meta = PAGE_META.find((m) => m.match(pathname)) ?? PAGE_META[0];
+
+  if (pathname === "/login") return null;
+
+  const user = session?.user;
 
   return (
     <header className="print:hidden h-[64px] flex-none bg-white border-b border-[#e6e8ec] flex items-center gap-[10px] sm:gap-[16px] px-[14px] lg:px-[26px] sticky top-0 z-20">
@@ -52,8 +72,35 @@ export function Header() {
         <Plus size={15} strokeWidth={2.2} />
         <span className="hidden sm:inline">New Contract</span>
       </Link>
-      <div className="w-[36px] h-[36px] rounded-full bg-[#3a5bd9]/[.15] text-[#3a5bd9] flex items-center justify-center font-semibold text-[13px] flex-none hidden sm:flex">
-        RM
+      <div className="relative hidden sm:block flex-none">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Account menu"
+          className="w-[36px] h-[36px] rounded-full bg-[#3a5bd9]/[.15] text-[#3a5bd9] flex items-center justify-center font-semibold text-[13px] hover:brightness-[0.95]"
+        >
+          {user?.name ? initials(user.name) : "?"}
+        </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+            <div className="absolute right-0 top-[44px] z-50 w-[220px] bg-white border border-[#e6e8ec] rounded-[10px] shadow-lg py-[6px]">
+              <div className="px-[14px] py-[8px] border-b border-[#f0f1f4]">
+                <div className="text-[13px] font-semibold truncate">{user?.name ?? "—"}</div>
+                <div className="text-[11.5px] text-[#667085] truncate">{user?.email ?? ""}</div>
+                <div className="text-[11px] text-[#3a5bd9] font-medium mt-[2px]">{ROLE_LABELS[user?.role ?? ""] ?? "—"}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="w-full flex items-center gap-[8px] px-[14px] py-[9px] text-[12.5px] text-[#c0362c] hover:bg-[#fbeceb] text-left"
+              >
+                <LogOut size={14} strokeWidth={2} />
+                Sign out
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </header>
   );

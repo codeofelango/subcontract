@@ -1,4 +1,5 @@
 import { getContractSummary } from "@/lib/api";
+import { BackLink } from "@/components/ui/BackLink";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { PrintButton } from "@/components/ui/PrintButton";
 
@@ -10,10 +11,11 @@ export default async function ContractSummaryPage({ params }: { params: Promise<
 
   return (
     <div className="flex flex-col gap-[18px] max-w-[900px] mx-auto print:max-w-none">
+      <BackLink href={`/contracts/${doc.id}`} label="Back to Contract Tracking" />
       <div className="flex items-center justify-between print:hidden">
         <div>
           <div className="text-[16.5px] font-semibold">Contract Summary — {doc.id}</div>
-          <div className="text-[12px] text-[#667085]">Downloadable subcontract document</div>
+          <div className="text-[12px] text-[#667085]">Preview of the created subcontract — downloadable/printable</div>
         </div>
         <PrintButton />
       </div>
@@ -41,6 +43,7 @@ export default async function ContractSummaryPage({ params }: { params: Promise<
             { label: "Source PR (Oracle)", value: doc.sourcePr },
             { label: "Oracle PO", value: doc.oraclePo ?? "Not yet issued" },
             { label: "Oracle PO Revision", value: doc.oraclePoRev ?? "—" },
+            { label: "PO DFF Contract Ref", value: doc.oraclePoDffRef ?? "Not yet issued" },
           ].map((f) => (
             <div key={f.label}>
               <div className="text-[11px] font-medium text-[#667085] mb-[3px]">{f.label}</div>

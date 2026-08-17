@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CircleCheck, Plus, Trash2, X } from "lucide-react";
+import { CircleCheck, Plus, Trash2, X } from "lucide-react";
 import { createContract } from "@/lib/api";
+import { BackLink } from "@/components/ui/BackLink";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import type { ApprovalStepOut, AttachmentOut, ContractorOption, DraftLineItem, NewContractDraftResponse, PaymentTermOption } from "@/lib/types";
@@ -168,7 +169,7 @@ export function NewContractForm({ draft, approvalPreview }: { draft: NewContract
         })),
         draftToken,
       });
-      router.push(`/contracts/${contract.id}`);
+      router.push(`/contracts/${contract.id}/summary`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to submit contract");
       setSubmitting(false);
@@ -178,10 +179,7 @@ export function NewContractForm({ draft, approvalPreview }: { draft: NewContract
   return (
     <div className="flex flex-col gap-[14px] max-w-[1800px]">
       <div className="flex items-center gap-[14px]">
-        <Link href="/contracts/new/work" className="flex items-center gap-[6px] text-[12.5px] font-semibold text-[#475467] hover:text-[#3a5bd9]">
-          <ArrowLeft size={15} strokeWidth={2.2} />
-          Back
-        </Link>
+        <BackLink href="/contracts/new/work" label="Back" />
         <Link href="/contracts/new" className="text-[12.5px] text-[#98a2b3] hover:text-[#3a5bd9]">
           Change contract type
         </Link>

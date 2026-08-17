@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import get_current_user
 from app.business import money, progress_color, rating_for, score_kpi
 from app.database import get_session
-from app.models import ChangeOrder, Contract, Evaluation, EvaluationKpiRow, Ipc, Penalty
-from app.schemas.dashboard import AlertItem, DashboardResponse, KpiItem, PendingActionItem, ServiceMixItem, VendorSummaryItem
+from app.models import AppUser, Contract, Evaluation, EvaluationKpiRow, Ipc, Penalty
+from app.pending import pending_actions
+from app.schemas.dashboard import AlertItem, DashboardResponse, KpiItem, ServiceMixItem, VendorSummaryItem
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -20,25 +22,13 @@ SERVICE_MIX_LABELS = {
 }
 
 
-def _age_label(dt: datetime.datetime | datetime.date | None) -> str:
-    if dt is None:
-        return "—"
-    today = datetime.date.today()
-    d = dt.date() if isinstance(dt, datetime.datetime) else dt
-    days = (today - d).days
-    if days <= 0:
-        return "Today"
-    if days == 1:
-        return "1 day"
-    return f"{days} days"
-
-
 @router.get("", response_model=DashboardResponse)
-async def get_dashboard(session: AsyncSession = Depends(get_session)) -> DashboardResponse:
+async def get_dashboard(
+    session: AsyncSession = Depends(get_session), current_user: AppUser = Depends(get_current_user)
+) -> DashboardResponse:
     contracts = (await session.execute(select(Contract))).scalars().all()
     ipcs = (await session.execute(select(Ipc))).scalars().all()
     penalties = (await session.execute(select(Penalty))).scalars().all()
-    change_orders = (await session.execute(select(ChangeOrder))).scalars().all()
 
     active_contracts = [c for c in contracts if c.status == "Active"]
     portfolio_value = sum((c.contract_value for c in contracts), Decimal("0"))
@@ -105,35 +95,7 @@ async def get_dashboard(session: AsyncSession = Depends(get_session)) -> Dashboa
         pct = round(float(amount / portfolio_value) * 100) if portfolio_value else 0
         service_mix.append(ServiceMixItem(label=label, amount=money(amount), pct=f"{pct}%", width=f"{pct}%", color=color))
 
-    pending: list[PendingActionItem] = []
-    for c in contracts:
-        if c.status == "Pending":
-            pending.append(PendingActionItem(
-                ref=c.id, item="New contract approval", vendor=c.vendor_name, stage="Procurement Director",
-                amount=money(c.contract_value), age=_age_label(c.created_at), color="#b45309", bg="#fbf1e3",
-            ))
-    for p in penalties:
-        if p.status == "In Approval":
-            c = await session.get(Contract, p.contract_id)
-            pending.append(PendingActionItem(
-                ref=p.id, item="Penalty approval", vendor=c.vendor_name, stage="Awaiting approval",
-                amount=money(p.amount), age=_age_label(p.raised_on), color="#c0362c", bg="#fbeceb",
-            ))
-    for i in ipcs:
-        if i.status == "Certifying":
-            c = await session.get(Contract, i.contract_id)
-            pending.append(PendingActionItem(
-                ref=f"{i.number.replace(' ', '-')}-{c.id}", item="Progress payment", vendor=c.vendor_name,
-                stage="Finance certify", amount=money(i.net_payable), age=_age_label(i.created_at),
-                color="#3a5bd9", bg="#eef1fd",
-            ))
-    for co in change_orders:
-        if co.status == "In Approval":
-            c = await session.get(Contract, co.contract_id)
-            pending.append(PendingActionItem(
-                ref=co.id, item="Change order approval", vendor=c.vendor_name, stage="Procurement Director",
-                amount="—", age=_age_label(co.created_at), color="#12805c", bg="#e6f4ee",
-            ))
+    pending = await pending_actions(session, current_user)
 
     # Vendor overview - groups contracts by vendor, pulling in each vendor's latest evaluation score if one exists.
     evaluations = (await session.execute(select(Evaluation).order_by(Evaluation.id.desc()))).scalars().all()

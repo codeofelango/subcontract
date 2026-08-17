@@ -8,9 +8,9 @@ azure-storage-blob's BlobServiceClient; nothing in routers/schemas/the frontend 
 import uuid
 from pathlib import Path
 
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Attachment
@@ -45,6 +45,10 @@ def delete_file(storage_path: str) -> None:
     full_path.unlink(missing_ok=True)
 
 
+def read_bytes(storage_path: str) -> bytes:
+    return (UPLOAD_ROOT.parent / storage_path).read_bytes()
+
+
 async def claim_attachments(session: AsyncSession, draft_token: str, owner_type: str, owner_id: str) -> None:
     """Re-parents every attachment uploaded under a draft_token to the now-created real record."""
     await session.execute(
@@ -52,3 +56,17 @@ async def claim_attachments(session: AsyncSession, draft_token: str, owner_type:
         .where(Attachment.draft_token == draft_token)
         .values(owner_type=owner_type, owner_id=owner_id, draft_token=None)
     )
+
+
+async def require_attachment(session: AsyncSession, draft_token: str) -> None:
+    """Raised by any create-flow whose owner type mandates at least one supporting document."""
+    exists = await session.scalar(select(Attachment.id).where(Attachment.draft_token == draft_token).limit(1))
+    if not exists:
+        raise HTTPException(status_code=400, detail="At least one supporting document is required")
+
+
+async def get_owner_attachments(session: AsyncSession, owner_type: str, owner_id: str) -> list[Attachment]:
+    result = await session.execute(
+        select(Attachment).where(Attachment.owner_type == owner_type, Attachment.owner_id == owner_id).order_by(Attachment.uploaded_at)
+    )
+    return list(result.scalars().all())

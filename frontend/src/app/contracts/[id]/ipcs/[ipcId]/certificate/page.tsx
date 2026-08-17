@@ -1,4 +1,5 @@
 import { getIpcCertificate } from "@/lib/api";
+import { BackLink } from "@/components/ui/BackLink";
 import { Card } from "@/components/ui/Card";
 import { PrintButton } from "@/components/ui/PrintButton";
 
@@ -10,6 +11,7 @@ export default async function IpcCertificatePage({ params }: { params: Promise<{
 
   return (
     <div className="flex flex-col gap-[18px] max-w-[820px] mx-auto print:max-w-none">
+      <BackLink href={`/contracts/${id}`} label="Back to Contract Tracking" />
       <div className="flex items-center justify-between print:hidden">
         <div>
           <div className="text-[16.5px] font-semibold">IPC Certificate — {cert.ipcNumber}</div>

@@ -82,6 +82,13 @@ export default async function DashboardPage() {
             </tr>
           </thead>
           <tbody>
+            {data.pendingActions.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-[18px] py-[20px] text-[13px] text-[#667085]">
+                  Nothing pending your action right now.
+                </td>
+              </tr>
+            )}
             {data.pendingActions.map((p, i) => (
               <tr key={i} className="border-t border-[#f0f1f4]">
                 <td className="px-[18px] py-[12px] font-mono font-medium text-[#3a5bd9]">{p.ref}</td>

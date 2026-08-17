@@ -1,6 +1,8 @@
 import type {
+  AccessRole,
   ActivityEntry,
   AttachmentOut,
+  ApprovalFlowInfo,
   ApprovalStepOut,
   AppUser,
   AskActivityResponse,
@@ -11,6 +13,9 @@ import type {
   DashboardResponse,
   EvaluationResponse,
   IpcCertificate,
+  IpcGrnInvoice,
+  IpcInvoice,
+  IpcReport,
   IpcRow,
   ManpowerContractDraftResponse,
   ManpowerContractSummaryResponse,
@@ -19,6 +24,8 @@ import type {
   NewContractDraftResponse,
   OraclePrOption,
   PenaltyDetailResponse,
+  PendingActionItem,
+  ProjectOption,
   TrackingResponse,
   VendorSubmission,
   WorkflowAppliesTo,
@@ -57,11 +64,31 @@ export interface NewContractRequest {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://subcontract.onrender.com";
+const PROXY_PATH = "/api/proxy";
+
+// Server Components/Route Handlers have no browser to auto-attach the session cookie, so on the
+// server we skip the loopback hop entirely: read the session directly and call the backend with
+// the bearer token attached. Dynamically imported so next-auth's server-only code never lands in
+// the client bundle (this file is also imported from "use client" components).
+async function getServerBearerToken(): Promise<string | null> {
+  if (typeof window !== "undefined") return null;
+  const { getServerSession } = await import("next-auth/next");
+  const { authOptions } = await import("./auth");
+  const session = await getServerSession(authOptions);
+  return session?.backendToken ?? null;
+}
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const isServer = typeof window === "undefined";
+  const base = isServer ? process.env.BACKEND_INTERNAL_URL || API_URL : PROXY_PATH;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (isServer) {
+    const token = await getServerBearerToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${base}${path}`, {
     cache: "no-store",
-    headers: { "Content-Type": "application/json" },
+    headers,
     ...init,
   });
   if (!res.ok) {
@@ -75,13 +102,22 @@ export function getDashboard(): Promise<DashboardResponse> {
   return apiFetch<DashboardResponse>("/dashboard");
 }
 
+export function getApprovals(): Promise<PendingActionItem[]> {
+  return apiFetch<PendingActionItem[]>("/approvals/mine");
+}
+
 export function listContracts(params: Record<string, string> = {}): Promise<ContractListResponse> {
   const query = new URLSearchParams(params).toString();
   return apiFetch<ContractListResponse>(`/contracts${query ? `?${query}` : ""}`);
 }
 
-export function listOraclePrs(): Promise<OraclePrOption[]> {
-  return apiFetch<OraclePrOption[]>("/contracts/oracle-prs");
+export function listOracleProjectsWithPrs(): Promise<ProjectOption[]> {
+  return apiFetch<ProjectOption[]>("/contracts/oracle-projects");
+}
+
+export function listOraclePrs(projectNo?: string): Promise<OraclePrOption[]> {
+  const query = projectNo ? `?project=${encodeURIComponent(projectNo)}` : "";
+  return apiFetch<OraclePrOption[]>(`/contracts/oracle-prs${query}`);
 }
 
 export function getNewContractDraft(prId: string): Promise<NewContractDraftResponse> {
@@ -122,16 +158,28 @@ export function approveContract(id: string): Promise<{ id: string; status: strin
   return apiFetch(`/contracts/${id}/approve`, { method: "POST" });
 }
 
+export function rejectContract(id: string): Promise<{ id: string; status: string }> {
+  return apiFetch(`/contracts/${id}/reject`, { method: "POST" });
+}
+
 export function getContractApprovalSteps(id: string): Promise<ApprovalStepOut[]> {
   return apiFetch<ApprovalStepOut[]>(`/contracts/${id}/approval-steps`);
+}
+
+export function getContractApprovalFlow(id: string): Promise<ApprovalFlowInfo> {
+  return apiFetch<ApprovalFlowInfo>(`/contracts/${id}/approval-flow`);
 }
 
 export function getApprovalPreview(appliesTo: "contract_scope" | "contract_manpower"): Promise<ApprovalStepOut[]> {
   return apiFetch<ApprovalStepOut[]>(`/contracts/new/approval-preview?appliesTo=${appliesTo}`);
 }
 
-export function advanceContractStep(id: string): Promise<{ id: string; status: string }> {
-  return apiFetch(`/contracts/${id}/advance-step`, { method: "POST" });
+export function decideContractStep(id: string, decision: "approved" | "rejected", comment?: string): Promise<{ id: string; status: string }> {
+  return apiFetch(`/contracts/${id}/decide`, { method: "POST", body: JSON.stringify({ decision, comment }) });
+}
+
+export function reviseContractStep(id: string, stepId: number, decision: "approved" | "rejected", reason: string): Promise<{ id: string; status: string }> {
+  return apiFetch(`/contracts/${id}/steps/${stepId}/revise`, { method: "POST", body: JSON.stringify({ decision, reason }) });
 }
 
 export function getContractTracking(id: string): Promise<TrackingResponse> {
@@ -144,6 +192,18 @@ export function getContractSummary(id: string): Promise<ContractSummaryDoc> {
 
 export function getIpcCertificate(contractId: string, ipcId: number): Promise<IpcCertificate> {
   return apiFetch<IpcCertificate>(`/contracts/${contractId}/ipcs/${ipcId}/certificate`);
+}
+
+export function getIpcReport(contractId: string, ipcId: number): Promise<IpcReport> {
+  return apiFetch<IpcReport>(`/contracts/${contractId}/ipcs/${ipcId}/report`);
+}
+
+export function getIpcInvoice(contractId: string, ipcId: number): Promise<IpcInvoice> {
+  return apiFetch<IpcInvoice>(`/contracts/${contractId}/ipcs/${ipcId}/invoice`);
+}
+
+export function getIpcGrnInvoice(contractId: string, ipcId: number): Promise<IpcGrnInvoice> {
+  return apiFetch<IpcGrnInvoice>(`/contracts/${contractId}/ipcs/${ipcId}/grn-invoice`);
 }
 
 export function getVendorSubmissions(contractId: string): Promise<VendorSubmission[]> {
@@ -170,16 +230,24 @@ export function getChangeOrders(contractId: string): Promise<ChangeOrderDetailRe
   return apiFetch<ChangeOrderDetailResponse>(`/change-orders/${contractId}`);
 }
 
-export function advanceChangeOrderStep(coId: string): Promise<{ id: string; status: string }> {
-  return apiFetch(`/change-orders/${coId}/advance-step`, { method: "POST" });
+export function decideChangeOrderStep(coId: string, decision: "approved" | "rejected", comment?: string): Promise<{ id: string; status: string }> {
+  return apiFetch(`/change-orders/${coId}/decide`, { method: "POST", body: JSON.stringify({ decision, comment }) });
+}
+
+export function reviseChangeOrderStep(coId: string, stepId: number, decision: "approved" | "rejected", reason: string): Promise<{ id: string; status: string }> {
+  return apiFetch(`/change-orders/${coId}/steps/${stepId}/revise`, { method: "POST", body: JSON.stringify({ decision, reason }) });
 }
 
 export function getPenalty(id: string): Promise<PenaltyDetailResponse> {
   return apiFetch<PenaltyDetailResponse>(`/penalties/${id}`);
 }
 
-export function advancePenaltyStep(id: string): Promise<{ id: string; status: string }> {
-  return apiFetch(`/penalties/${id}/advance-step`, { method: "POST" });
+export function decidePenaltyStep(id: string, decision: "approved" | "rejected", comment?: string): Promise<{ id: string; status: string }> {
+  return apiFetch(`/penalties/${id}/decide`, { method: "POST", body: JSON.stringify({ decision, comment }) });
+}
+
+export function revisePenaltyStep(id: string, stepId: number, decision: "approved" | "rejected", reason: string): Promise<{ id: string; status: string }> {
+  return apiFetch(`/penalties/${id}/steps/${stepId}/revise`, { method: "POST", body: JSON.stringify({ decision, reason }) });
 }
 
 export interface UserInput {
@@ -188,6 +256,7 @@ export interface UserInput {
   department: string;
   title: string;
   active: boolean;
+  role: AccessRole;
 }
 
 export function getUsers(): Promise<AppUser[]> {
@@ -244,7 +313,7 @@ export async function uploadAttachment(draftToken: string, file: File): Promise<
   const form = new FormData();
   form.append("draftToken", draftToken);
   form.append("file", file);
-  const res = await fetch(`${API_URL}/attachments`, { method: "POST", body: form });
+  const res = await fetch(`${PROXY_PATH}/attachments`, { method: "POST", body: form });
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Upload failed (${res.status}): ${body}`);

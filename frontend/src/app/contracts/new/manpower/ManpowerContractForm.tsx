@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Users } from "lucide-react";
+import { Plus, Trash2, Users } from "lucide-react";
 import { createManpowerContract } from "@/lib/api";
+import { BackLink } from "@/components/ui/BackLink";
 import { Card, CardHeader } from "@/components/ui/Card";
 import type { ApprovalStepOut, AttachmentOut, ContractorOption, ManpowerContractDraftResponse, ManpowerPositionLineIn } from "@/lib/types";
 import { AttachmentUploader } from "../../AttachmentUploader";
@@ -126,10 +126,7 @@ export function ManpowerContractForm({
 
   return (
     <div className="flex flex-col gap-[14px] max-w-[1800px]">
-      <Link href="/contracts/new" className="flex items-center gap-[6px] text-[12.5px] font-semibold text-[#475467] hover:text-[#3a5bd9] w-fit">
-        <ArrowLeft size={15} strokeWidth={2.2} />
-        Back
-      </Link>
+      <BackLink href="/contracts/new" label="Back" />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-[22px] items-start">
       <div className="flex flex-col gap-[18px]">

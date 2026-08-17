@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useSidebar } from "./SidebarContext";
+import { isPathAllowed } from "@/lib/roles";
+import type { AccessRole } from "@/lib/types";
 
 interface NavItem {
   isGroup?: boolean;
@@ -15,6 +18,8 @@ const NAV_ITEMS: NavItem[] = [
   { isGroup: true, label: "Overview" },
   { label: "Portfolio Dashboard", href: "/dashboard" },
   { label: "Contracts", href: "/contracts", match: (p) => p === "/contracts" },
+  { isGroup: true, label: "My Approvals" },
+  { label: "Approvals Inbox", href: "/approvals" },
   { isGroup: true, label: "Manage" },
   { label: "New Contract", href: "/contracts/new" },
   { label: "Contract Tracking", href: "/contracts/SC-2024-0142", match: (p) => p.startsWith("/contracts/") && p !== "/contracts/new" },
@@ -30,9 +35,24 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Approval Flows", href: "/approval-flows", match: (p) => p.startsWith("/approval-flows") },
 ];
 
+function visibleNavItems(role: AccessRole): NavItem[] {
+  const withAccess = NAV_ITEMS.filter((item) => item.isGroup || isPathAllowed(role, item.href!));
+  return withAccess.filter((item, i) => {
+    if (!item.isGroup) return true;
+    const next = withAccess[i + 1];
+    return !!next && !next.isGroup;
+  });
+}
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const { isOpen, close } = useSidebar();
+
+  if (pathname === "/login") return null;
+
+  const role = (session?.user?.role ?? null) as AccessRole;
+  const items = visibleNavItems(role);
 
   return (
     <>
@@ -57,7 +77,7 @@ export function Sidebar() {
           </div>
         </div>
         <nav className="flex-1 overflow-y-auto px-[12px] py-[14px]">
-          {NAV_ITEMS.map((item, i) => {
+          {items.map((item, i) => {
             if (item.isGroup) {
               return (
                 <div key={i} className="text-[10px] font-semibold tracking-[.09em] uppercase text-[#5b667e] px-[12px] pt-[16px] pb-[7px]">
